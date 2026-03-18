@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: locsa_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: locsa_db
+      POSTGRES_USER: locsa_user
+      POSTGRES_PASSWORD: locsa_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U locsa_user -d locsa_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: locsa_backend
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/locsa_db
+      SPRING_DATASOURCE_USERNAME: locsa_user
+      SPRING_DATASOURCE_PASSWORD: locsa_password
+      JWT_SECRET: locsaSarl2024SecretKeyForJWTTokenGenerationMustBe256BitsLong
+      JWT_EXPIRATION: 86400000
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: locsa_frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+    driver: local
