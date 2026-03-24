@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -95,11 +96,18 @@ public class UserController {
         }
     }
 
-    /** Upload avatar — admin only */
+    /** Upload avatar — admin or the user themselves */
     @PostMapping("/{id}/avatar")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> uploadAvatar(@PathVariable Long id,
-                                          @RequestParam("file") MultipartFile file) {
+                                          @RequestParam("file") MultipartFile file,
+                                          Authentication auth) {
+        // Allow only admin or the user uploading their own photo
+        boolean isAdmin = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        User caller = userRepository.findByUsername(auth.getName()).orElse(null);
+        if (!isAdmin && (caller == null || !caller.getId().equals(id))) {
+            return ResponseEntity.status(403).body(Map.of("error", "Accès refusé"));
+        }
         if (file.isEmpty()) return ResponseEntity.badRequest().body(Map.of("error", "Fichier vide"));
         String ct = file.getContentType();
         if (ct == null || !ct.startsWith("image/")) {

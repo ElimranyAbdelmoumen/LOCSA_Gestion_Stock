@@ -275,35 +275,38 @@ const Users = () => {
                     <td className="table-cell">
                       <div className="flex items-center gap-2.5">
                         {/* Avatar with upload button */}
-                        <label className="relative cursor-pointer group flex-shrink-0" title="Changer la photo">
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={e => e.target.files[0] && handleAvatarUpload(u.id, e.target.files[0])}
-                          />
+                        <div className="relative flex-shrink-0">
                           {u.avatarUrl ? (
                             <img
                               src={u.avatarUrl}
                               alt={u.username}
-                              className={`w-9 h-9 rounded-xl object-cover ring-2 ${u.active ? 'ring-blue-200' : 'ring-gray-200'}`}
+                              className={`w-10 h-10 rounded-xl object-cover ring-2 ${u.active ? 'ring-blue-200' : 'ring-gray-200'}`}
                             />
                           ) : (
-                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${u.active ? 'bg-blue-100' : 'bg-gray-100'}`}>
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${u.active ? 'bg-blue-100' : 'bg-gray-100'}`}>
                               {u.role === 'ADMIN'
-                                ? <ShieldCheck size={15} className={u.active ? 'text-purple-600' : 'text-gray-400'} />
-                                : <User size={15} className={u.active ? 'text-blue-600' : 'text-gray-400'} />
+                                ? <ShieldCheck size={16} className={u.active ? 'text-purple-600' : 'text-gray-400'} />
+                                : <User size={16} className={u.active ? 'text-blue-600' : 'text-gray-400'} />
                               }
                             </div>
                           )}
-                          {/* Overlay on hover */}
-                          <div className="absolute inset-0 rounded-xl bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          {/* Camera badge — always visible */}
+                          <label
+                            className="absolute -bottom-1 -right-1 w-5 h-5 bg-blue-600 hover:bg-blue-700 rounded-full flex items-center justify-center cursor-pointer shadow-md transition-colors"
+                            title="Changer la photo"
+                          >
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={e => e.target.files[0] && handleAvatarUpload(u.id, e.target.files[0])}
+                            />
                             {avatarUploading === u.id
-                              ? <Loader2 size={12} className="text-white animate-spin" />
-                              : <Camera size={12} className="text-white" />
+                              ? <Loader2 size={10} className="text-white animate-spin" />
+                              : <Camera size={10} className="text-white" />
                             }
-                          </div>
-                        </label>
+                          </label>
+                        </div>
                         <span className={`font-semibold ${u.active ? 'text-gray-800' : 'text-gray-400'}`}>{u.username}</span>
                       </div>
                     </td>
