@@ -12,6 +12,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.List;
 
@@ -24,6 +25,12 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
     private final UserDetailsService userDetailsService;
+    private final AuditService auditService;
+
+    private String currentAdmin() {
+        try { return SecurityContextHolder.getContext().getAuthentication().getName(); }
+        catch (Exception e) { return "system"; }
+    }
 
     public AuthResponse login(LoginRequest request) {
         authenticationManager.authenticate(
@@ -95,6 +102,10 @@ public class AuthService {
         }
 
         userRepository.save(user);
+        auditService.log("USER", id, "UPDATE", currentAdmin(),
+                "Profil modifié: " + user.getUsername()
+                + " rôle=" + user.getRole().name()
+                + (user.getCity() != null ? " ville=" + user.getCity().name() : ""), null);
         return new UserResponse(user.getId(), user.getUsername(), user.getRole().name(),
                 user.getCity() != null ? user.getCity().name() : null, user.isActive());
     }
@@ -104,6 +115,8 @@ public class AuthService {
                 .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
+        auditService.log("USER", id, "UPDATE", currentAdmin(),
+                "Mot de passe modifié pour: " + user.getUsername(), null);
     }
 
     public UserResponse toggleActive(Long id) {
@@ -112,8 +125,11 @@ public class AuthService {
         if (user.getRole() == Role.ADMIN) {
             throw new RuntimeException("Impossible de suspendre un administrateur");
         }
+        boolean wasSuspended = !user.isActive();
         user.setActive(!user.isActive());
         userRepository.save(user);
+        auditService.log("USER", id, "UPDATE", currentAdmin(),
+                (wasSuspended ? "Compte réactivé: " : "Compte suspendu: ") + user.getUsername(), null);
         return new UserResponse(user.getId(), user.getUsername(), user.getRole().name(),
                 user.getCity() != null ? user.getCity().name() : null, user.isActive());
     }
@@ -121,6 +137,8 @@ public class AuthService {
     public void deleteUser(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
+        auditService.log("USER", id, "DELETE", currentAdmin(),
+                "Compte supprimé: " + user.getUsername(), null);
         userRepository.delete(user);
     }
 }

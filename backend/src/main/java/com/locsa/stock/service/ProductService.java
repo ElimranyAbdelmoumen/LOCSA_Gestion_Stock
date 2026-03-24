@@ -88,8 +88,15 @@ public class ProductService {
     public void deleteProduct(Long id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
-        String name = product.getName();
-        auditService.log("PRODUCT", id, "DELETE", "system", "Produit supprimé: " + name, null);
+        long entries = stockEntryRepository.countByProductId(id);
+        long exits   = stockExitRepository.countByProductId(id);
+        if (entries > 0 || exits > 0) {
+            throw new RuntimeException(
+                "Impossible de supprimer \"" + product.getName() + "\" : "
+                + (entries + exits) + " mouvement(s) enregistré(s). Désactivez le produit plutôt que de le supprimer."
+            );
+        }
+        auditService.log("PRODUCT", id, "DELETE", "system", "Produit supprimé: " + product.getName(), null);
         productRepository.deleteById(id);
     }
 

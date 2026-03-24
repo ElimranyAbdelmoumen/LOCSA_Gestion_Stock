@@ -462,6 +462,7 @@ const Entries = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Date d'entrée <span className="text-red-500">*</span></label>
                     <input type="date" name="dateEntry" value={form.dateEntry} onChange={handleChange}
+                      max={today}
                       className={`input-field ${formErrors.dateEntry ? 'border-red-400' : ''}`} />
                     {formErrors.dateEntry && <p className="mt-1 text-xs text-red-500">{formErrors.dateEntry}</p>}
                   </div>
@@ -474,7 +475,7 @@ const Entries = () => {
                     <div className="relative">
                       <input type="number" name="quantity" value={form.quantity} onChange={handleChange}
                         className={`input-field ${form.category === 'B' ? 'pr-10' : ''} ${formErrors.quantity ? 'border-red-400' : ''}`}
-                        placeholder="0" min="1" />
+                        placeholder="0" min="1" step="1" />
                       {form.category === 'B' && (
                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-amber-600">L</span>
                       )}

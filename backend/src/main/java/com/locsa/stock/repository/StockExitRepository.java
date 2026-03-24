@@ -12,6 +12,8 @@ import java.util.List;
 
 public interface StockExitRepository extends JpaRepository<StockExit, Long> {
 
+    long countByProductId(Long productId);
+
     List<StockExit> findAllByOrderByDateExitDesc();
     List<StockExit> findByProductIdOrderByDateExitDesc(Long productId);
     List<StockExit> findByProductIdAndCityOrderByDateExitDesc(Long productId, City city);

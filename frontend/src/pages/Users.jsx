@@ -75,7 +75,7 @@ const Users = () => {
     if (!createForm.username.trim()) errs.username = "Le nom d'utilisateur est requis"
     else if (createForm.username.trim().length < 3) errs.username = "Minimum 3 caractères"
     if (!createForm.password) errs.password = 'Le mot de passe est requis'
-    else if (createForm.password.length < 4) errs.password = 'Minimum 4 caractères'
+    else if (createForm.password.length < 6) errs.password = 'Minimum 6 caractères'
     if (createForm.role === 'USER' && !createForm.city) errs.city = 'La ville est requise'
     return errs
   }
@@ -163,7 +163,7 @@ const Users = () => {
 
   const handlePwdSubmit = async (e) => {
     e.preventDefault()
-    if (!newPassword || newPassword.length < 4) { setPwdError('Minimum 4 caractères'); return }
+    if (!newPassword || newPassword.length < 6) { setPwdError('Minimum 6 caractères'); return }
     setPwdLoading(true)
     setPwdError('')
     try {

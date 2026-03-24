@@ -137,7 +137,8 @@ const Exits = () => {
   }
 
   const handleChange = (e) => {
-    const { name, value } = e.target
+    const { name } = e.target
+    const value = name === 'immatriculation' ? e.target.value.toUpperCase() : e.target.value
     setForm(prev => ({ ...prev, [name]: value }))
     if (formErrors[name]) setFormErrors(prev => ({ ...prev, [name]: '' }))
     if (formError) setFormError('')
@@ -474,8 +475,8 @@ const Exits = () => {
                         className={`input-field ${formErrors.productId ? 'border-red-400' : ''}`}>
                         <option value="">— Sélectionner un produit —</option>
                         {availableProducts.map(p => (
-                          <option key={p.id} value={p.id}>
-                            {p.name} — stock: {p.quantity}{isCatB ? ' L' : ''}
+                          <option key={p.id} value={p.id} disabled={p.quantity <= 0}>
+                            {p.quantity <= 0 ? '⚠ ' : ''}{p.name} — stock: {p.quantity}{isCatB ? ' L' : ''}{p.quantity <= 0 ? ' (épuisé)' : ''}
                           </option>
                         ))}
                       </select>
@@ -508,6 +509,7 @@ const Exits = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Date de sortie <span className="text-red-500">*</span></label>
                     <input type="date" name="dateExit" value={form.dateExit} onChange={handleChange}
+                      max={today}
                       className={`input-field ${formErrors.dateExit ? 'border-red-400' : ''}`} />
                     {formErrors.dateExit && <p className="mt-1 text-xs text-red-500">{formErrors.dateExit}</p>}
                   </div>
@@ -520,7 +522,7 @@ const Exits = () => {
                     <div className="relative">
                       <input type="number" name="quantity" value={form.quantity} onChange={handleChange}
                         className={`input-field ${isCatB ? 'pr-10' : ''} ${formErrors.quantity ? 'border-red-400' : ''}`}
-                        placeholder="0" min="1" />
+                        placeholder="0" min="1" step="1" />
                       {isCatB && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-amber-600">L</span>}
                     </div>
                     {formErrors.quantity && <p className="mt-1 text-xs text-red-500">{formErrors.quantity}</p>}

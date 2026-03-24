@@ -63,7 +63,8 @@ public class StockExitService {
 
     @Transactional
     public StockExitResponse createExit(StockExitRequest request, String username, City forcedCity) {
-        Product product = productRepository.findById(request.getProductId())
+        // Pessimistic lock to prevent concurrent over-withdrawal on same product
+        Product product = productRepository.findByIdWithLock(request.getProductId())
                 .orElseThrow(() -> new RuntimeException("Produit introuvable"));
 
         City city = forcedCity != null ? forcedCity : request.getCity();
