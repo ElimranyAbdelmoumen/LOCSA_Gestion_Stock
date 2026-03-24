@@ -33,6 +33,10 @@ public interface StockExitRepository extends JpaRepository<StockExit, Long> {
     @Query("SELECT COALESCE(SUM(e.quantity), 0) FROM StockExit e WHERE e.product.id = :productId AND e.city = :city")
     Long getTotalExitsByProductAndCity(@Param("productId") Long productId, @Param("city") City city);
 
+    /** Returns [productId, totalQuantity] for all products in a city — single batch query */
+    @Query("SELECT e.product.id, COALESCE(SUM(e.quantity), 0) FROM StockExit e WHERE e.city = :city GROUP BY e.product.id")
+    List<Object[]> getTotalExitsPerProductForCity(@Param("city") City city);
+
     @Query("SELECT COALESCE(SUM(e.quantity), 0) FROM StockExit e WHERE e.product.id = :productId")
     Long getTotalExitsByProduct(@Param("productId") Long productId);
 

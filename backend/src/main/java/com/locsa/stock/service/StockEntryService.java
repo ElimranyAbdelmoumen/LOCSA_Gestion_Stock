@@ -115,6 +115,18 @@ public class StockEntryService {
         );
     }
 
+    @Transactional
+    public void cancelEntry(Long id, String username) {
+        StockEntry entry = stockEntryRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Entrée introuvable"));
+        Product product = entry.getProduct();
+        product.setQuantity(product.getQuantity() - entry.getQuantity());
+        productRepository.save(product);
+        auditService.log("STOCK_ENTRY", id, "CANCEL", username,
+                "Annulation entrée: " + product.getName() + " qté=" + entry.getQuantity() + " ref=" + entry.getReference(), entry.getCity());
+        stockEntryRepository.deleteById(id);
+    }
+
     public List<StockEntryResponse> getRecentEntries() {
         return stockEntryRepository.findTop5ByOrderByDateEntryDesc()
                 .stream()

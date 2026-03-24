@@ -174,6 +174,18 @@ public class StockExitService {
         );
     }
 
+    @Transactional
+    public void cancelExit(Long id, String username) {
+        StockExit exit = stockExitRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Sortie introuvable"));
+        Product product = exit.getProduct();
+        product.setQuantity(product.getQuantity() + exit.getQuantity());
+        productRepository.save(product);
+        auditService.log("STOCK_EXIT", id, "CANCEL", username,
+                "Annulation sortie: " + product.getName() + " qté=" + exit.getQuantity() + " ref=" + exit.getReference(), exit.getCity());
+        stockExitRepository.deleteById(id);
+    }
+
     public List<StockExitResponse> getRecentExits() {
         return stockExitRepository.findTop5ByOrderByDateExitDesc()
                 .stream()

@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react'
-import { getExits, createExit } from '../api/exits'
+import { getExits, createExit, deleteExit } from '../api/exits'
 import { getProducts } from '../api/products'
 import { getSites } from '../api/sites'
 import { useAuth } from '../context/AuthContext'
-import { Plus, X, Loader2, TrendingDown, Search, Package, MapPin, Building2, Download, Printer } from 'lucide-react'
+import { Plus, X, Loader2, TrendingDown, Search, Package, MapPin, Building2, Download, Printer, Trash2 } from 'lucide-react'
 import { exportToExcel } from '../utils/exportUtils'
 import Pagination from '../components/Pagination'
 
@@ -182,6 +182,16 @@ const Exits = () => {
     }
   }
 
+  const handleCancelExit = async (id, ref) => {
+    if (!window.confirm(`Annuler la sortie ${ref || '#' + id} ? Le stock sera recalculé.`)) return
+    try {
+      await deleteExit(id)
+      fetchAll(cityFilter, exitsPage.currentPage)
+    } catch (err) {
+      alert(err.response?.data?.error || 'Erreur lors de l\'annulation.')
+    }
+  }
+
   const handleExportCSV = () => {
     const rows = exitsPage.content
     exportToExcel(rows, 'sorties-stock', [
@@ -308,6 +318,7 @@ const Exits = () => {
                   <th className="table-header">Date</th>
                   {isAdmin && <th className="table-header">Par</th>}
                   <th className="table-header">Commentaire</th>
+                  {isAdmin && <th className="table-header"></th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -383,6 +394,17 @@ const Exits = () => {
                     <td className="table-cell text-gray-500 max-w-xs truncate text-sm">
                       {exit.comment || <span className="italic text-gray-300">—</span>}
                     </td>
+                    {isAdmin && (
+                      <td className="table-cell">
+                        <button
+                          onClick={() => handleCancelExit(exit.id, exit.reference)}
+                          className="text-red-400 hover:text-red-600 transition-colors"
+                          title="Annuler cette sortie"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

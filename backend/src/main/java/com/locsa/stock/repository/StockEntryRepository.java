@@ -33,6 +33,10 @@ public interface StockEntryRepository extends JpaRepository<StockEntry, Long> {
     @Query("SELECT COALESCE(SUM(e.quantity), 0) FROM StockEntry e WHERE e.product.id = :productId AND e.city = :city")
     Long getTotalEntriesByProductAndCity(@Param("productId") Long productId, @Param("city") City city);
 
+    /** Returns [productId, totalQuantity] for all products in a city — single batch query */
+    @Query("SELECT e.product.id, COALESCE(SUM(e.quantity), 0) FROM StockEntry e WHERE e.city = :city GROUP BY e.product.id")
+    List<Object[]> getTotalEntriesPerProductForCity(@Param("city") City city);
+
     @Query("SELECT COALESCE(SUM(e.quantity), 0) FROM StockEntry e WHERE e.product.id = :productId")
     Long getTotalEntriesByProduct(@Param("productId") Long productId);
 

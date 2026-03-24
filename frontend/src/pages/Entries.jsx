@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react'
-import { getEntries, createEntry } from '../api/entries'
+import { getEntries, createEntry, deleteEntry } from '../api/entries'
 import { getProducts } from '../api/products'
 import { useAuth } from '../context/AuthContext'
-import { Plus, X, Loader2, TrendingUp, Search, MapPin, Building2, Download, Printer } from 'lucide-react'
+import { Plus, X, Loader2, TrendingUp, Search, MapPin, Building2, Download, Printer, Trash2 } from 'lucide-react'
 import { exportToExcel } from '../utils/exportUtils'
 import Pagination from '../components/Pagination'
 
@@ -166,6 +166,16 @@ const Entries = () => {
     }
   }
 
+  const handleCancelEntry = async (id, ref) => {
+    if (!window.confirm(`Annuler l'entrée ${ref || '#' + id} ? Le stock sera recalculé.`)) return
+    try {
+      await deleteEntry(id)
+      fetchAll(cityFilter, entriesPage.currentPage)
+    } catch (err) {
+      alert(err.response?.data?.error || 'Erreur lors de l\'annulation.')
+    }
+  }
+
   const handleExportCSV = () => {
     const rows = entriesPage.content
     exportToExcel(rows, 'entrees-stock', [
@@ -301,6 +311,7 @@ const Entries = () => {
                   <th className="table-header">Date</th>
                   {isAdmin && <th className="table-header">Par</th>}
                   <th className="table-header">Commentaire</th>
+                  {isAdmin && <th className="table-header"></th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -349,6 +360,17 @@ const Entries = () => {
                     <td className="table-cell text-gray-500 max-w-xs truncate text-sm">
                       {entry.comment || <span className="italic text-gray-300">—</span>}
                     </td>
+                    {isAdmin && (
+                      <td className="table-cell">
+                        <button
+                          onClick={() => handleCancelEntry(entry.id, entry.reference)}
+                          className="text-red-400 hover:text-red-600 transition-colors"
+                          title="Annuler cette entrée"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

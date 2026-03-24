@@ -2,6 +2,7 @@ package com.locsa.stock.security;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -28,16 +29,30 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                                     FilterChain filterChain)
             throws ServletException, IOException {
 
-        final String authHeader = request.getHeader("Authorization");
         final String jwt;
         final String username;
 
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            filterChain.doFilter(request, response);
-            return;
+        // 1. Try Authorization header (Bearer token)
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            jwt = authHeader.substring(7);
+        } else {
+            // 2. Fallback: httpOnly cookie named "jwt"
+            String cookieJwt = null;
+            if (request.getCookies() != null) {
+                for (Cookie cookie : request.getCookies()) {
+                    if ("jwt".equals(cookie.getName())) {
+                        cookieJwt = cookie.getValue();
+                        break;
+                    }
+                }
+            }
+            if (cookieJwt == null) {
+                filterChain.doFilter(request, response);
+                return;
+            }
+            jwt = cookieJwt;
         }
-
-        jwt = authHeader.substring(7);
 
         try {
             username = jwtUtil.extractUsername(jwt);

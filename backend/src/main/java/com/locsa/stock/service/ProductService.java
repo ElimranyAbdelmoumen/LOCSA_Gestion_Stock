@@ -17,7 +17,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -38,10 +40,17 @@ public class ProductService {
     }
 
     public List<ProductResponse> getAllProductsForCity(City city) {
+        // Batch queries — 2 queries total instead of 2×N
+        Map<Long, Long> entriesMap = new HashMap<>();
+        for (Object[] row : stockEntryRepository.getTotalEntriesPerProductForCity(city)) {
+            entriesMap.put((Long) row[0], ((Number) row[1]).longValue());
+        }
+        Map<Long, Long> exitsMap = new HashMap<>();
+        for (Object[] row : stockExitRepository.getTotalExitsPerProductForCity(city)) {
+            exitsMap.put((Long) row[0], ((Number) row[1]).longValue());
+        }
         return productRepository.findAll().stream().map(p -> {
-            Long entries = stockEntryRepository.getTotalEntriesByProductAndCity(p.getId(), city);
-            Long exits   = stockExitRepository.getTotalExitsByProductAndCity(p.getId(), city);
-            Long cityStock = (entries != null ? entries : 0L) - (exits != null ? exits : 0L);
+            long cityStock = entriesMap.getOrDefault(p.getId(), 0L) - exitsMap.getOrDefault(p.getId(), 0L);
             return new ProductResponse(p.getId(), p.getName(), p.getDescription(),
                     cityStock, p.getCategory(), p.getMinQuantity());
         }).collect(Collectors.toList());
@@ -100,7 +109,7 @@ public class ProductService {
         productRepository.deleteById(id);
     }
 
-    public List<ProductHistoryItem> getProductHistory(Long productId, City city) {
+    public PageResponse<ProductHistoryItem> getProductHistory(Long productId, City city, int page, int size) {
         productRepository.findById(productId)
                 .orElseThrow(() -> new RuntimeException("Produit introuvable"));
 
@@ -142,7 +151,14 @@ public class ProductService {
                 )));
 
         history.sort((a, b) -> b.getDate().compareTo(a.getDate()));
-        return history;
+
+        int total = history.size();
+        int totalPages = size > 0 ? (int) Math.ceil((double) total / size) : 1;
+        int from = size > 0 ? page * size : 0;
+        int to   = size > 0 ? Math.min(from + size, total) : total;
+        List<ProductHistoryItem> pageContent = (from < total) ? history.subList(from, to) : List.of();
+
+        return new PageResponse<>(pageContent, total, totalPages, page, size > 0 ? size : total);
     }
 
     public ProductResponse toResponse(Product product) {

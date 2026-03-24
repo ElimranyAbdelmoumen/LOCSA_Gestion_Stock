@@ -8,3 +8,4 @@ export const getExits = (city, dateFrom, dateTo, page = 0, size = 20) => {
   return api.get('/exits', { params })
 }
 export const createExit = (data) => api.post('/exits', data)
+export const deleteExit = (id) => api.delete(`/exits/${id}`)

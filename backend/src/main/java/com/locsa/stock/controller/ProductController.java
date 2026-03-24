@@ -97,13 +97,15 @@ public class ProductController {
     @GetMapping("/{id}/history")
     public ResponseEntity<?> getProductHistory(
             @PathVariable Long id,
-            @RequestParam(required = false) String city) {
+            @RequestParam(required = false) String city,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size) {
         try {
             City cityEnum = null;
             if (city != null && !city.isBlank()) {
                 try { cityEnum = City.valueOf(city.toUpperCase()); } catch (IllegalArgumentException ignored) {}
             }
-            return ResponseEntity.ok(productService.getProductHistory(id, cityEnum));
+            return ResponseEntity.ok(productService.getProductHistory(id, cityEnum, page, size));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }

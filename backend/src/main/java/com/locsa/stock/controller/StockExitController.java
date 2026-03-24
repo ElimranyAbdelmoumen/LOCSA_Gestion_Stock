@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.web.bind.annotation.*;
@@ -44,6 +45,17 @@ public class StockExitController {
             cityEnum = user.getCity();
         }
         return ResponseEntity.ok(stockExitService.getAllExits(auth.getName(), isAdmin, cityEnum, dateFrom, dateTo, page, size));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> cancelExit(@PathVariable Long id, Authentication auth) {
+        try {
+            stockExitService.cancelExit(id, auth.getName());
+            return ResponseEntity.ok(Map.of("message", "Sortie annulée"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 
     @PostMapping

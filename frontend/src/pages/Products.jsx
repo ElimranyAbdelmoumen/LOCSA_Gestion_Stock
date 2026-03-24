@@ -148,7 +148,7 @@ const Products = () => {
     setHistoryLoading(true)
     try {
       const res = await getProductHistory(product.id, '')
-      setHistoryData(res.data)
+      setHistoryData(res.data.content ?? res.data)
     } catch {
       setHistoryData([])
     } finally {
@@ -160,7 +160,7 @@ const Products = () => {
     setHistoryLoading(true)
     try {
       const res = await getProductHistory(product.id, city)
-      setHistoryData(res.data)
+      setHistoryData(res.data.content ?? res.data)
     } catch {
       setHistoryData([])
     } finally {

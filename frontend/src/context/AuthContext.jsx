@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react'
-import { login as loginApi } from '../api/auth'
+import { login as loginApi, logout as logoutApi } from '../api/auth'
 
 const AuthContext = createContext(null)
 
@@ -13,7 +13,7 @@ const getTokenExpiry = (token) => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser]               = useState(null)
   const [loading, setLoading]         = useState(true)
-  const [sessionWarning, setSessionWarning] = useState(false) // shows 5-min warning banner
+  const [sessionWarning, setSessionWarning] = useState(false)
   const warnTimerRef   = useRef(null)
   const expireTimerRef = useRef(null)
 
@@ -22,30 +22,34 @@ export const AuthProvider = ({ children }) => {
     if (expireTimerRef.current) clearTimeout(expireTimerRef.current)
   }
 
-  const scheduleSessionTimers = (token) => {
+  const scheduleSessionTimers = (expiresAt) => {
     clearTimers()
-    const expiry = getTokenExpiry(token)
-    if (!expiry) return
+    if (!expiresAt) return
     const now = Date.now()
-    const msUntilExpiry = expiry - now
+    const msUntilExpiry = expiresAt - now
     if (msUntilExpiry <= 0) return
-    const msUntilWarn = msUntilExpiry - 5 * 60 * 1000 // warn 5 min before
+    const msUntilWarn = msUntilExpiry - 5 * 60 * 1000
     if (msUntilWarn > 0) {
       warnTimerRef.current = setTimeout(() => setSessionWarning(true), msUntilWarn)
     } else {
-      setSessionWarning(true) // already within warning window
+      setSessionWarning(true)
     }
-    expireTimerRef.current = setTimeout(() => {
-      logout()
-    }, msUntilExpiry)
+    expireTimerRef.current = setTimeout(() => logout(), msUntilExpiry)
   }
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
-    const token = localStorage.getItem('token')
-    if (storedUser && token) {
-      setUser(JSON.parse(storedUser))
-      scheduleSessionTimers(token)
+    const storedExpiry = localStorage.getItem('expiresAt')
+    if (storedUser) {
+      const expiresAt = storedExpiry ? Number(storedExpiry) : null
+      if (expiresAt && Date.now() >= expiresAt) {
+        // Session already expired — clean up
+        localStorage.removeItem('user')
+        localStorage.removeItem('expiresAt')
+      } else {
+        setUser(JSON.parse(storedUser))
+        scheduleSessionTimers(expiresAt)
+      }
     }
     setLoading(false)
     return () => clearTimers()
@@ -54,19 +58,21 @@ export const AuthProvider = ({ children }) => {
   const login = async (credentials) => {
     const response = await loginApi(credentials)
     const { token, username, role, city } = response.data
-    localStorage.setItem('token', token)
+    const expiresAt = getTokenExpiry(token)
     const userData = { username, role, city }
     localStorage.setItem('user', JSON.stringify(userData))
+    if (expiresAt) localStorage.setItem('expiresAt', String(expiresAt))
     setUser(userData)
     setSessionWarning(false)
-    scheduleSessionTimers(token)
+    scheduleSessionTimers(expiresAt)
     return userData
   }
 
   const logout = () => {
     clearTimers()
-    localStorage.removeItem('token')
+    logoutApi().catch(() => {}) // clear server-side cookie
     localStorage.removeItem('user')
+    localStorage.removeItem('expiresAt')
     setUser(null)
     setSessionWarning(false)
   }
