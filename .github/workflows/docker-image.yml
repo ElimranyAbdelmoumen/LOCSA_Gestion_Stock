@@ -42,7 +42,14 @@ jobs:
       - name: Push frontend image
         run: |
           docker push ghcr.io/${{ steps.repo.outputs.repo }}/frontend:latest
-
+      - name: Debug GHCR username
+        run: |
+          if [ -z "${{ secrets.GHCR_USERNAME }}" ]; then
+            echo "GHCR_USERNAME is empty"
+            exit 1
+          else
+            echo "GHCR_USERNAME exists"
+          fi
       - name: Deploy on server
         uses: appleboy/ssh-action@v1.0.3
         with:
