@@ -2,7 +2,7 @@ name: Deploy with Docker Compose
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   build-and-deploy:
@@ -26,6 +26,7 @@ jobs:
       - name: Extract repo lowercase
         id: repo
         run: echo "repo=${GITHUB_REPOSITORY,,}" >> $GITHUB_OUTPUT
+
       - name: Debug GHCR username
         run: |
           if [ -z "${{ secrets.GHCR_USERNAME }}" ]; then
@@ -34,21 +35,37 @@ jobs:
           else
             echo "GHCR_USERNAME exists"
           fi
+
+      - name: Set image names
+        id: image_names
+        run: |
+          echo "backend_image=ghcr.io/${{ steps.repo.outputs.repo }}/backend:latest" >> $GITHUB_OUTPUT
+          echo "frontend_image=ghcr.io/${{ steps.repo.outputs.repo }}/frontend:latest" >> $GITHUB_OUTPUT
+
       - name: Build backend image
         run: |
-          docker build -t ghcr.io/${{ steps.repo.outputs.repo }}/backend:latest ./backend
+          docker build -t "${{ steps.image_names.outputs.backend_image }}" ./backend
 
       - name: Build frontend image
         run: |
-          docker build -t ghcr.io/${{ steps.repo.outputs.repo }}/frontend:latest ./frontend
+          docker build -t "${{ steps.image_names.outputs.frontend_image }}" ./frontend
 
       - name: Push backend image
         run: |
-          docker push ghcr.io/${{ steps.repo.outputs.repo }}/backend:latest
+          docker push "${{ steps.image_names.outputs.backend_image }}"
 
       - name: Push frontend image
         run: |
-          docker push ghcr.io/${{ steps.repo.outputs.repo }}/frontend:latest
+          docker push "${{ steps.image_names.outputs.frontend_image }}"
+
+      - name: Copy production compose file to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: "docker-compose.production.yml"
+          target: "/docker/locsa"
 
       - name: Deploy on server
         uses: appleboy/ssh-action@v1.0.3
@@ -57,8 +74,20 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
+            mkdir -p /docker/locsa/uploads
             cd /docker/locsa
+
+            cat > .env <<EOF
+            BACKEND_IMAGE=${{ steps.image_names.outputs.backend_image }}
+            FRONTEND_IMAGE=${{ steps.image_names.outputs.frontend_image }}
+            POSTGRES_DB=locsa_db
+            POSTGRES_USER=locsa_user
+            POSTGRES_PASSWORD=locsa_password
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            JWT_EXPIRATION=86400000
+            EOF
+
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
-            docker compose pull
-            docker compose up -d
+            docker compose -f docker-compose.production.yml pull
+            docker compose -f docker-compose.production.yml up -d
             docker image prune -f
