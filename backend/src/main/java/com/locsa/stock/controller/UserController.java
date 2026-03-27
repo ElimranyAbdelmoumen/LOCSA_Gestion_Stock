@@ -116,7 +116,9 @@ public class UserController {
         try {
             User user = userRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
-            String ext = ct.contains("png") ? "png" : "jpg";
+            String ext = ct.substring(ct.lastIndexOf('/') + 1).replaceAll("[^a-zA-Z0-9]", "").toLowerCase();
+            if (ext.equals("jpeg")) ext = "jpg";
+            if (ext.isBlank()) ext = "jpg";
             String filename = id + "_" + UUID.randomUUID().toString().substring(0, 8) + "." + ext;
             Path dir = Paths.get(uploadDir, "avatars");
             Files.createDirectories(dir);
@@ -146,7 +148,11 @@ public class UserController {
             if (!Files.exists(path)) return ResponseEntity.notFound().build();
             byte[] bytes = Files.readAllBytes(path);
             String ext = path.getFileName().toString().toLowerCase();
-            MediaType mt = ext.endsWith("png") ? MediaType.IMAGE_PNG : MediaType.IMAGE_JPEG;
+            MediaType mt;
+            if (ext.endsWith("png")) mt = MediaType.IMAGE_PNG;
+            else if (ext.endsWith("gif")) mt = MediaType.IMAGE_GIF;
+            else if (ext.endsWith("webp")) mt = MediaType.parseMediaType("image/webp");
+            else mt = MediaType.IMAGE_JPEG;
             return ResponseEntity.ok().contentType(mt).body(bytes);
         } catch (IOException e) {
             return ResponseEntity.internalServerError().build();
