@@ -9,26 +9,24 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-locsa_db}
       POSTGRES_USER: ${POSTGRES_USER:-locsa_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-locsa_password}
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test:
         [
           "CMD-SHELL",
-          "pg_isready -U ${POSTGRES_USER:-locsa_user} -d ${POSTGRES_DB:-locsa_db}",
+          "pg_isready -U ${POSTGRES_USER:-locsa_user} -d ${POSTGRES_DB:-locsa_db}"
         ]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - internal
 
   backend:
     image: ${BACKEND_IMAGE}
     container_name: locsa_backend
     restart: unless-stopped
-    ports:
-      - "8080:8080"
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-locsa_db}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-locsa_user}
@@ -40,16 +38,43 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      - internal
+      - proxy
+    labels:
+      - "traefik.enable=true"
+
+      # API router
+      - "traefik.http.routers.locsa-api.rule=Host(`locsa.ma`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.locsa-api.entrypoints=websecure"
+      - "traefik.http.routers.locsa-api.tls=true"
+      - "traefik.http.routers.locsa-api.tls.certresolver=myresolver"
+      - "traefik.http.services.locsa-api.loadbalancer.server.port=8080"
 
   frontend:
     image: ${FRONTEND_IMAGE}
     container_name: locsa_frontend
     restart: unless-stopped
-    ports:
-      - "80:80"
     depends_on:
       - backend
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+
+      # Front router
+      - "traefik.http.routers.locsa-front.rule=Host(`locsa.ma`) || Host(`www.locsa.ma`)"
+      - "traefik.http.routers.locsa-front.entrypoints=websecure"
+      - "traefik.http.routers.locsa-front.tls=true"
+      - "traefik.http.routers.locsa-front.tls.certresolver=myresolver"
+      - "traefik.http.services.locsa-front.loadbalancer.server.port=80"
 
 volumes:
   postgres_data:
     driver: local
+
+networks:
+  internal:
+    driver: bridge
+  proxy:
+    external: true
