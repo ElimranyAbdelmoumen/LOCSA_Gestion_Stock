@@ -238,65 +238,65 @@ const Exits = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Sorties de Stock</h1>
-          <p className="text-gray-500 text-sm mt-1">{exitsPage.totalElements} sortie(s) enregistrée(s)</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Sorties de Stock</h1>
+          <p className="text-gray-500 text-sm mt-0.5">{exitsPage.totalElements} sortie(s)</p>
         </div>
         <div className="flex items-center gap-2 no-print">
-          <button onClick={handleExportCSV} className="btn-secondary flex items-center gap-2 no-print">
-            <Download size={16} /> Exporter
+          <button onClick={handleExportCSV} className="btn-secondary flex items-center gap-1.5 no-print px-3">
+            <Download size={15} /> <span className="hidden sm:inline">Exporter</span>
           </button>
-          <button onClick={() => window.print()} className="btn-secondary flex items-center gap-2 no-print">
-            <Printer size={16} /> Imprimer
+          <button onClick={() => window.print()} className="btn-secondary flex items-center gap-1.5 no-print px-3">
+            <Printer size={15} /> <span className="hidden sm:inline">Imprimer</span>
           </button>
-          <button onClick={openModal} className="btn-primary flex items-center gap-2">
-            <Plus size={16} /> Nouvelle Sortie
+          <button onClick={openModal} className="btn-primary flex items-center gap-1.5 px-3">
+            <Plus size={16} /> <span className="hidden sm:inline">Nouvelle Sortie</span><span className="sm:hidden">Ajouter</span>
           </button>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3">
-        <div className="relative flex-1 min-w-48">
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">
+        <div className="relative flex-1 min-w-0">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Rechercher par produit, bénéficiaire, code..."
+            placeholder="Rechercher produit, bénéficiaire, code..."
             className="input-field pl-9" />
         </div>
 
-        {/* Date filters */}
         <div className="flex items-center gap-2">
-          <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="input-field text-sm" placeholder="Du" />
-          <span className="text-gray-400 text-sm">→</span>
-          <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="input-field text-sm" placeholder="Au" />
+          <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="input-field text-sm flex-1" />
+          <span className="text-gray-400 text-sm flex-shrink-0">→</span>
+          <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="input-field text-sm flex-1" />
           {(dateFrom || dateTo) && (
-            <button onClick={() => { setDateFrom(''); setDateTo('') }} className="text-xs text-gray-400 hover:text-gray-600 underline">Effacer</button>
+            <button onClick={() => { setDateFrom(''); setDateTo('') }} className="text-xs text-gray-400 hover:text-gray-600 underline flex-shrink-0">Effacer</button>
           )}
         </div>
 
-        <div className="flex gap-1">
+        <div className="flex gap-1 flex-wrap">
           {['', 'A', 'B', 'C'].map(c => (
             <button key={c} onClick={() => setCatFilter(c)}
               className={`px-3 py-2 text-xs font-medium rounded-lg transition-all ${catFilter === c ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
               {c === '' ? 'Toutes' : `Cat. ${c}`}
             </button>
           ))}
+          {isAdmin ? (
+            <>
+              {CITIES.map(c => (
+                <button key={c.value} onClick={() => setCityFilter(cityFilter === c.value ? '' : c.value)}
+                  className={`px-3 py-2 text-xs font-medium rounded-lg transition-all ${cityFilter === c.value ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                  {c.label}
+                </button>
+              ))}
+            </>
+          ) : (
+            <div className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium ${CITY_COLORS[userCity] || 'bg-gray-100 text-gray-600'}`}>
+              <Building2 size={13} />
+              {CITIES.find(c => c.value === userCity)?.label || userCity}
+            </div>
+          )}
         </div>
-
-        {isAdmin ? (
-          <div className="flex gap-1">
-            <button onClick={() => setCityFilter('')} className={`px-3 py-2 text-xs font-medium rounded-lg transition-all ${cityFilter === '' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>Toutes</button>
-            {CITIES.map(c => (
-              <button key={c.value} onClick={() => setCityFilter(c.value)} className={`px-3 py-2 text-xs font-medium rounded-lg transition-all ${cityFilter === c.value ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>{c.label}</button>
-            ))}
-          </div>
-        ) : (
-          <div className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium ${CITY_COLORS[userCity] || 'bg-gray-100 text-gray-600'}`}>
-            <Building2 size={13} />
-            {CITIES.find(c => c.value === userCity)?.label || userCity}
-          </div>
-        )}
       </div>
 
       {/* Table */}
@@ -313,117 +313,147 @@ const Exits = () => {
             <p className="text-gray-400">Aucune sortie trouvée</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="border-b border-gray-100 bg-gray-50">
-                <tr>
-                  <th className="table-header">Réf</th>
-                  <th className="table-header">#</th>
-                  <th className="table-header">Produit</th>
-                  <th className="table-header">Cat.</th>
-                  <th className="table-header">Ville</th>
-                  <th className="table-header">Qté</th>
-                  <th className="table-header">Détails</th>
-                  <th className="table-header">Date</th>
-                  {isAdmin && <th className="table-header">Par</th>}
-                  <th className="table-header">Commentaire</th>
-                  {isAdmin && <th className="table-header"></th>}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {filtered.map((exit, idx) => (
-                  <tr key={exit.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="table-cell text-gray-400 text-xs font-mono">{exit.reference || '—'}</td>
-                    <td className="table-cell text-gray-400 text-xs">{idx + 1}</td>
-                    <td className="table-cell">
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 bg-red-100 rounded-lg flex items-center justify-center">
-                          <Package size={13} className="text-red-500" />
-                        </div>
-                        <span className="font-semibold text-gray-800">{exit.productName}</span>
-                      </div>
-                    </td>
-                    <td className="table-cell">
-                      <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-bold ${CAT_COLOR[exit.productCategory] || CAT_COLOR.C}`}>
-                        {exit.productCategory || 'C'}
-                      </span>
-                    </td>
-                    <td className="table-cell">
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${CITY_COLORS[exit.city] || 'bg-gray-100 text-gray-600'}`}>
-                        <MapPin size={10} /> {cityLabel(exit.city)}
-                      </span>
-                    </td>
-                    <td className="table-cell">
-                      <span className="inline-flex items-center gap-1 font-bold text-red-500">
-                        <TrendingDown size={14} />
-                        -{exit.quantity}{exit.productCategory === 'B' ? ' L' : ''}
-                      </span>
-                    </td>
-                    <td className="table-cell text-xs text-gray-500 max-w-xs">
-                      {exit.productCategory === 'A' && (
-                        <div className="space-y-0.5">
-                          {exit.code         && <div><span className="text-gray-400">Code:</span> {exit.code}</div>}
-                          {exit.serialNumber && <div><span className="text-gray-400">N° Série:</span> {exit.serialNumber}</div>}
-                          {exit.beneficiary  && <div><span className="text-gray-400">Bénéf.:</span> {exit.beneficiary}</div>}
-                        </div>
-                      )}
-                      {exit.productCategory === 'B' && (
-                        <div className="space-y-0.5">
-                          {exit.gasoilType && (
-                            <div>
-                              <span className={`inline-flex px-1.5 py-0.5 rounded text-xs font-bold ${exit.gasoilType === 'GE' ? 'bg-yellow-100 text-yellow-700' : 'bg-sky-100 text-sky-700'}`}>
-                                {exit.gasoilType === 'GE' ? '⚡ GE' : '🚗 Véhicule'}
-                              </span>
-                            </div>
-                          )}
-                          {exit.gasoilType === 'GE' && exit.siteName && (
-                            <div className="text-amber-600">Site: {exit.siteName}</div>
-                          )}
-                          {exit.gasoilType === 'VEHICULE' && exit.immatriculation && (
-                            <div className="text-sky-600 font-mono">{exit.immatriculation}</div>
-                          )}
-                          {!exit.gasoilType && (exit.siteName
-                            ? <span className="text-amber-600">Site: {exit.siteName}</span>
-                            : <span className="text-gray-500">{exit.beneficiary}</span>
-                          )}
-                        </div>
-                      )}
-                      {(!exit.productCategory || exit.productCategory === 'C') && (
-                        <span className={exit.beneficiary ? 'text-blue-600' : 'italic text-gray-300'}>
-                          {exit.beneficiary || '—'}
-                        </span>
-                      )}
-                    </td>
-                    <td className="table-cell text-gray-500 text-sm">
-                      <div>{formatDate(exit.dateExit)}</div>
-                      {formatTime(exit.createdAt) && (
-                        <div className="text-xs text-gray-400">{formatTime(exit.createdAt)}</div>
-                      )}
-                    </td>
-                    {isAdmin && (
-                      <td className="table-cell">
-                        <span className="px-2 py-0.5 bg-gray-100 rounded-full text-xs text-gray-600 font-medium">{exit.createdBy}</span>
-                      </td>
-                    )}
-                    <td className="table-cell text-gray-500 max-w-xs truncate text-sm">
-                      {exit.comment || <span className="italic text-gray-300">—</span>}
-                    </td>
-                    {isAdmin && (
-                      <td className="table-cell">
-                        <button
-                          onClick={() => setCancelTarget({ id: exit.id, ref: exit.reference })}
-                          className="text-red-400 hover:text-red-600 transition-colors"
-                          title="Annuler cette sortie"
-                        >
-                          <Trash2 size={14} />
+          <>
+            {/* Mobile card view */}
+            <div className="sm:hidden divide-y divide-gray-100">
+              {filtered.map((exit) => (
+                <div key={exit.id} className="p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-800 truncate">{exit.productName}</p>
+                      <p className="text-xs text-gray-400 font-mono mt-0.5">{exit.reference || '—'}</p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="text-rose-600 font-bold text-base">-{exit.quantity}{exit.productCategory === 'B' ? 'L' : ''}</span>
+                      {isAdmin && (
+                        <button onClick={() => setCancelTarget({ id: exit.id, ref: exit.reference })}
+                          className="text-red-400 hover:text-red-600 p-1">
+                          <Trash2 size={16} />
                         </button>
-                      </td>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${CAT_COLOR[exit.productCategory] || CAT_COLOR.C}`}>{exit.productCategory || 'C'}</span>
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${CITY_COLORS[exit.city] || 'bg-gray-100 text-gray-600'}`}>
+                      <MapPin size={9} />{cityLabel(exit.city)}
+                    </span>
+                    <span className="text-xs text-gray-400">{formatDate(exit.dateExit)}</span>
+                    {isAdmin && exit.createdBy && (
+                      <span className="px-2 py-0.5 bg-gray-100 rounded-full text-xs text-gray-500">{exit.createdBy}</span>
                     )}
+                  </div>
+                  {exit.productCategory === 'B' && exit.gasoilType && (
+                    <div className="mt-1.5 flex items-center gap-2 text-xs">
+                      <span className={`px-1.5 py-0.5 rounded font-bold ${exit.gasoilType === 'GE' ? 'bg-yellow-100 text-yellow-700' : 'bg-sky-100 text-sky-700'}`}>
+                        {exit.gasoilType === 'GE' ? '⚡ GE' : '🚗 Véhicule'}
+                      </span>
+                      {exit.gasoilType === 'GE' && exit.siteName && <span className="text-amber-600">Site: {exit.siteName}</span>}
+                      {exit.gasoilType === 'VEHICULE' && exit.immatriculation && <span className="text-sky-600 font-mono">{exit.immatriculation}</span>}
+                    </div>
+                  )}
+                  {exit.beneficiary && <p className="mt-1 text-xs text-blue-600">Bénéf.: {exit.beneficiary}</p>}
+                  {exit.comment && <p className="mt-1 text-xs text-gray-400 truncate">{exit.comment}</p>}
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop table view */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="w-full">
+                <thead className="border-b border-gray-100 bg-gray-50">
+                  <tr>
+                    <th className="table-header">Réf</th>
+                    <th className="table-header">#</th>
+                    <th className="table-header">Produit</th>
+                    <th className="table-header">Cat.</th>
+                    <th className="table-header">Ville</th>
+                    <th className="table-header">Qté</th>
+                    <th className="table-header">Détails</th>
+                    <th className="table-header">Date</th>
+                    {isAdmin && <th className="table-header">Par</th>}
+                    <th className="table-header">Commentaire</th>
+                    {isAdmin && <th className="table-header"></th>}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {filtered.map((exit, idx) => (
+                    <tr key={exit.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="table-cell text-gray-400 text-xs font-mono">{exit.reference || '—'}</td>
+                      <td className="table-cell text-gray-400 text-xs">{idx + 1}</td>
+                      <td className="table-cell">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 bg-red-100 rounded-lg flex items-center justify-center">
+                            <Package size={13} className="text-red-500" />
+                          </div>
+                          <span className="font-semibold text-gray-800">{exit.productName}</span>
+                        </div>
+                      </td>
+                      <td className="table-cell">
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-bold ${CAT_COLOR[exit.productCategory] || CAT_COLOR.C}`}>{exit.productCategory || 'C'}</span>
+                      </td>
+                      <td className="table-cell">
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${CITY_COLORS[exit.city] || 'bg-gray-100 text-gray-600'}`}>
+                          <MapPin size={10} /> {cityLabel(exit.city)}
+                        </span>
+                      </td>
+                      <td className="table-cell">
+                        <span className="inline-flex items-center gap-1 font-bold text-red-500">
+                          <TrendingDown size={14} />-{exit.quantity}{exit.productCategory === 'B' ? ' L' : ''}
+                        </span>
+                      </td>
+                      <td className="table-cell text-xs text-gray-500 max-w-xs">
+                        {exit.productCategory === 'A' && (
+                          <div className="space-y-0.5">
+                            {exit.code         && <div><span className="text-gray-400">Code:</span> {exit.code}</div>}
+                            {exit.serialNumber && <div><span className="text-gray-400">N° Série:</span> {exit.serialNumber}</div>}
+                            {exit.beneficiary  && <div><span className="text-gray-400">Bénéf.:</span> {exit.beneficiary}</div>}
+                          </div>
+                        )}
+                        {exit.productCategory === 'B' && (
+                          <div className="space-y-0.5">
+                            {exit.gasoilType && (
+                              <div>
+                                <span className={`inline-flex px-1.5 py-0.5 rounded text-xs font-bold ${exit.gasoilType === 'GE' ? 'bg-yellow-100 text-yellow-700' : 'bg-sky-100 text-sky-700'}`}>
+                                  {exit.gasoilType === 'GE' ? '⚡ GE' : '🚗 Véhicule'}
+                                </span>
+                              </div>
+                            )}
+                            {exit.gasoilType === 'GE' && exit.siteName && <div className="text-amber-600">Site: {exit.siteName}</div>}
+                            {exit.gasoilType === 'VEHICULE' && exit.immatriculation && <div className="text-sky-600 font-mono">{exit.immatriculation}</div>}
+                            {!exit.gasoilType && (exit.siteName ? <span className="text-amber-600">Site: {exit.siteName}</span> : <span className="text-gray-500">{exit.beneficiary}</span>)}
+                          </div>
+                        )}
+                        {(!exit.productCategory || exit.productCategory === 'C') && (
+                          <span className={exit.beneficiary ? 'text-blue-600' : 'italic text-gray-300'}>{exit.beneficiary || '—'}</span>
+                        )}
+                      </td>
+                      <td className="table-cell text-gray-500 text-sm">
+                        <div>{formatDate(exit.dateExit)}</div>
+                        {formatTime(exit.createdAt) && <div className="text-xs text-gray-400">{formatTime(exit.createdAt)}</div>}
+                      </td>
+                      {isAdmin && (
+                        <td className="table-cell">
+                          <span className="px-2 py-0.5 bg-gray-100 rounded-full text-xs text-gray-600 font-medium">{exit.createdBy}</span>
+                        </td>
+                      )}
+                      <td className="table-cell text-gray-500 max-w-xs truncate text-sm">
+                        {exit.comment || <span className="italic text-gray-300">—</span>}
+                      </td>
+                      {isAdmin && (
+                        <td className="table-cell">
+                          <button onClick={() => setCancelTarget({ id: exit.id, ref: exit.reference })}
+                            className="text-red-400 hover:text-red-600 transition-colors" title="Annuler cette sortie">
+                            <Trash2 size={14} />
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
         <Pagination
           currentPage={exitsPage.currentPage}

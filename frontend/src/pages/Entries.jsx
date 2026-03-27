@@ -221,75 +221,66 @@ const Entries = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Entrées de Stock</h1>
-          <p className="text-gray-500 text-sm mt-1">{entriesPage.totalElements} entrée(s) enregistrée(s)</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Entrées de Stock</h1>
+          <p className="text-gray-500 text-sm mt-0.5">{entriesPage.totalElements} entrée(s)</p>
         </div>
         <div className="flex items-center gap-2 no-print">
-          <button onClick={handleExportCSV} className="btn-secondary flex items-center gap-2 no-print">
-            <Download size={16} /> Exporter
+          <button onClick={handleExportCSV} className="btn-secondary flex items-center gap-1.5 no-print px-3">
+            <Download size={15} /> <span className="hidden sm:inline">Exporter</span>
           </button>
-          <button onClick={() => window.print()} className="btn-secondary flex items-center gap-2 no-print">
-            <Printer size={16} /> Imprimer
+          <button onClick={() => window.print()} className="btn-secondary flex items-center gap-1.5 no-print px-3">
+            <Printer size={15} /> <span className="hidden sm:inline">Imprimer</span>
           </button>
-          <button onClick={openModal} className="btn-primary flex items-center gap-2">
-            <Plus size={16} /> Nouvelle Entrée
+          <button onClick={openModal} className="btn-primary flex items-center gap-1.5 px-3">
+            <Plus size={16} /> <span className="hidden sm:inline">Nouvelle Entrée</span><span className="sm:hidden">Ajouter</span>
           </button>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3">
-        <div className="relative flex-1 min-w-48">
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">
+        <div className="relative flex-1 min-w-0">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Rechercher par produit, code, N° série..."
-            className="input-field pl-9"
-          />
+          <input type="text" value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Rechercher produit, code, N° série..."
+            className="input-field pl-9" />
         </div>
 
         {/* Date filters */}
         <div className="flex items-center gap-2">
-          <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="input-field text-sm" placeholder="Du" />
-          <span className="text-gray-400 text-sm">→</span>
-          <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="input-field text-sm" placeholder="Au" />
+          <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="input-field text-sm flex-1" />
+          <span className="text-gray-400 text-sm flex-shrink-0">→</span>
+          <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="input-field text-sm flex-1" />
           {(dateFrom || dateTo) && (
-            <button onClick={() => { setDateFrom(''); setDateTo('') }} className="text-xs text-gray-400 hover:text-gray-600 underline">Effacer</button>
+            <button onClick={() => { setDateFrom(''); setDateTo('') }} className="text-xs text-gray-400 hover:text-gray-600 underline flex-shrink-0">Effacer</button>
           )}
         </div>
 
-        {/* Cat filter */}
-        <div className="flex gap-1">
+        <div className="flex gap-1 flex-wrap">
           {['', 'A', 'B', 'C'].map(c => (
-            <button
-              key={c}
-              onClick={() => setCatFilter(c)}
-              className={`px-3 py-2 text-xs font-medium rounded-lg transition-all ${
-                catFilter === c ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
+            <button key={c} onClick={() => setCatFilter(c)}
+              className={`px-3 py-2 text-xs font-medium rounded-lg transition-all ${catFilter === c ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
               {c === '' ? 'Toutes' : `Cat. ${c}`}
             </button>
           ))}
+          {isAdmin ? (
+            <>
+              {CITIES.map(c => (
+                <button key={c.value} onClick={() => setCityFilter(cityFilter === c.value ? '' : c.value)}
+                  className={`px-3 py-2 text-xs font-medium rounded-lg transition-all ${cityFilter === c.value ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                  {c.label}
+                </button>
+              ))}
+            </>
+          ) : (
+            <div className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium ${CITY_COLORS[userCity] || 'bg-gray-100 text-gray-600'}`}>
+              <Building2 size={13} />
+              {CITIES.find(c => c.value === userCity)?.label || userCity}
+            </div>
+          )}
         </div>
-
-        {isAdmin ? (
-          <div className="flex gap-1">
-            <button onClick={() => setCityFilter('')} className={`px-3 py-2 text-xs font-medium rounded-lg transition-all ${cityFilter === '' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>Toutes</button>
-            {CITIES.map(c => (
-              <button key={c.value} onClick={() => setCityFilter(c.value)} className={`px-3 py-2 text-xs font-medium rounded-lg transition-all ${cityFilter === c.value ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>{c.label}</button>
-            ))}
-          </div>
-        ) : (
-          <div className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium ${CITY_COLORS[userCity] || 'bg-gray-100 text-gray-600'}`}>
-            <Building2 size={13} />
-            {CITIES.find(c => c.value === userCity)?.label || userCity}
-          </div>
-        )}
       </div>
 
       {/* Table */}
@@ -306,90 +297,127 @@ const Entries = () => {
             <p className="text-gray-400">Aucune entrée trouvée</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="border-b border-gray-100">
-                <tr>
-                  <th className="table-header">Réf</th>
-                  <th className="table-header">#</th>
-                  <th className="table-header">Produit</th>
-                  <th className="table-header">Cat.</th>
-                  <th className="table-header">Ville</th>
-                  <th className="table-header">Qté</th>
-                  <th className="table-header">Détails</th>
-                  <th className="table-header">Date</th>
-                  {isAdmin && <th className="table-header">Par</th>}
-                  <th className="table-header">Commentaire</th>
-                  {isAdmin && <th className="table-header"></th>}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {filtered.map((entry, idx) => (
-                  <tr key={entry.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="table-cell text-gray-400 text-xs font-mono">{entry.reference || '—'}</td>
-                    <td className="table-cell text-gray-400 text-xs">{idx + 1}</td>
-                    <td className="table-cell font-semibold text-gray-800">{entry.productName}</td>
-                    <td className="table-cell">
-                      <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-bold ${catColor(entry.productCategory)}`}>
-                        {entry.productCategory || 'C'}
-                      </span>
-                    </td>
-                    <td className="table-cell">
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${CITY_COLORS[entry.city] || 'bg-gray-100 text-gray-600'}`}>
-                        <MapPin size={10} />
-                        {cityLabel(entry.city)}
-                      </span>
-                    </td>
-                    <td className="table-cell">
-                      <span className="inline-flex items-center gap-1 text-green-600 font-bold">
-                        <TrendingUp size={14} />
-                        +{entry.quantity}{entry.productCategory === 'B' ? ' L' : ''}
-                      </span>
-                    </td>
-                    <td className="table-cell text-xs text-gray-500 max-w-xs">
-                      {entry.productCategory === 'A' && (
-                        <div className="space-y-0.5">
-                          {entry.code         && <div><span className="text-gray-400">Code:</span> {entry.code}</div>}
-                          {entry.serialNumber && <div><span className="text-gray-400">N° Série:</span> {entry.serialNumber}</div>}
-                          {entry.brand        && <div><span className="text-gray-400">Marque:</span> {entry.brand}</div>}
-                          {entry.power        && <div><span className="text-gray-400">Puissance:</span> {entry.power}</div>}
-                        </div>
-                      )}
-                      {entry.productCategory === 'B' && entry.station && (
-                        <span className="text-amber-600">Station: {entry.station}</span>
-                      )}
-                      {entry.productCategory === 'C' && <span className="italic text-gray-300">—</span>}
-                    </td>
-                    <td className="table-cell text-gray-500 text-sm">
-                      <div>{formatDate(entry.dateEntry)}</div>
-                      {formatTime(entry.createdAt) && (
-                        <div className="text-xs text-gray-400">{formatTime(entry.createdAt)}</div>
-                      )}
-                    </td>
-                    {isAdmin && (
-                      <td className="table-cell">
-                        <span className="px-2 py-0.5 bg-gray-100 rounded-full text-xs text-gray-600 font-medium">{entry.createdBy}</span>
-                      </td>
-                    )}
-                    <td className="table-cell text-gray-500 max-w-xs truncate text-sm">
-                      {entry.comment || <span className="italic text-gray-300">—</span>}
-                    </td>
-                    {isAdmin && (
-                      <td className="table-cell">
-                        <button
-                          onClick={() => setCancelTarget({ id: entry.id, ref: entry.reference })}
-                          className="text-red-400 hover:text-red-600 transition-colors"
-                          title="Annuler cette entrée"
-                        >
-                          <Trash2 size={14} />
+          <>
+            {/* Mobile card view */}
+            <div className="sm:hidden divide-y divide-gray-100">
+              {filtered.map((entry) => (
+                <div key={entry.id} className="p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-800 truncate">{entry.productName}</p>
+                      <p className="text-xs text-gray-400 font-mono mt-0.5">{entry.reference || '—'}</p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="text-emerald-600 font-bold text-base">+{entry.quantity}{entry.productCategory === 'B' ? 'L' : ''}</span>
+                      {isAdmin && (
+                        <button onClick={() => setCancelTarget({ id: entry.id, ref: entry.reference })}
+                          className="text-red-400 hover:text-red-600 p-1">
+                          <Trash2 size={16} />
                         </button>
-                      </td>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${catColor(entry.productCategory)}`}>{entry.productCategory || 'C'}</span>
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${CITY_COLORS[entry.city] || 'bg-gray-100 text-gray-600'}`}>
+                      <MapPin size={9} />{cityLabel(entry.city)}
+                    </span>
+                    <span className="text-xs text-gray-400">{formatDate(entry.dateEntry)}</span>
+                    {isAdmin && entry.createdBy && (
+                      <span className="px-2 py-0.5 bg-gray-100 rounded-full text-xs text-gray-500">{entry.createdBy}</span>
                     )}
+                  </div>
+                  {(entry.productCategory === 'A' && (entry.code || entry.serialNumber || entry.brand || entry.power)) && (
+                    <div className="mt-1.5 text-xs text-gray-500 space-y-0.5">
+                      {entry.code && <span className="mr-2"><span className="text-gray-400">Code:</span> {entry.code}</span>}
+                      {entry.serialNumber && <span className="mr-2"><span className="text-gray-400">Série:</span> {entry.serialNumber}</span>}
+                      {entry.brand && <span className="mr-2"><span className="text-gray-400">Marque:</span> {entry.brand}</span>}
+                      {entry.power && <span><span className="text-gray-400">Puissance:</span> {entry.power}</span>}
+                    </div>
+                  )}
+                  {entry.productCategory === 'B' && entry.station && (
+                    <p className="mt-1 text-xs text-amber-600">Station: {entry.station}</p>
+                  )}
+                  {entry.comment && <p className="mt-1 text-xs text-gray-400 truncate">{entry.comment}</p>}
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop table view */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="w-full">
+                <thead className="border-b border-gray-100">
+                  <tr>
+                    <th className="table-header">Réf</th>
+                    <th className="table-header">#</th>
+                    <th className="table-header">Produit</th>
+                    <th className="table-header">Cat.</th>
+                    <th className="table-header">Ville</th>
+                    <th className="table-header">Qté</th>
+                    <th className="table-header">Détails</th>
+                    <th className="table-header">Date</th>
+                    {isAdmin && <th className="table-header">Par</th>}
+                    <th className="table-header">Commentaire</th>
+                    {isAdmin && <th className="table-header"></th>}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {filtered.map((entry, idx) => (
+                    <tr key={entry.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="table-cell text-gray-400 text-xs font-mono">{entry.reference || '—'}</td>
+                      <td className="table-cell text-gray-400 text-xs">{idx + 1}</td>
+                      <td className="table-cell font-semibold text-gray-800">{entry.productName}</td>
+                      <td className="table-cell">
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-bold ${catColor(entry.productCategory)}`}>{entry.productCategory || 'C'}</span>
+                      </td>
+                      <td className="table-cell">
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${CITY_COLORS[entry.city] || 'bg-gray-100 text-gray-600'}`}>
+                          <MapPin size={10} />{cityLabel(entry.city)}
+                        </span>
+                      </td>
+                      <td className="table-cell">
+                        <span className="inline-flex items-center gap-1 text-green-600 font-bold">
+                          <TrendingUp size={14} />+{entry.quantity}{entry.productCategory === 'B' ? ' L' : ''}
+                        </span>
+                      </td>
+                      <td className="table-cell text-xs text-gray-500 max-w-xs">
+                        {entry.productCategory === 'A' && (
+                          <div className="space-y-0.5">
+                            {entry.code         && <div><span className="text-gray-400">Code:</span> {entry.code}</div>}
+                            {entry.serialNumber && <div><span className="text-gray-400">N° Série:</span> {entry.serialNumber}</div>}
+                            {entry.brand        && <div><span className="text-gray-400">Marque:</span> {entry.brand}</div>}
+                            {entry.power        && <div><span className="text-gray-400">Puissance:</span> {entry.power}</div>}
+                          </div>
+                        )}
+                        {entry.productCategory === 'B' && entry.station && <span className="text-amber-600">Station: {entry.station}</span>}
+                        {entry.productCategory === 'C' && <span className="italic text-gray-300">—</span>}
+                      </td>
+                      <td className="table-cell text-gray-500 text-sm">
+                        <div>{formatDate(entry.dateEntry)}</div>
+                        {formatTime(entry.createdAt) && <div className="text-xs text-gray-400">{formatTime(entry.createdAt)}</div>}
+                      </td>
+                      {isAdmin && (
+                        <td className="table-cell">
+                          <span className="px-2 py-0.5 bg-gray-100 rounded-full text-xs text-gray-600 font-medium">{entry.createdBy}</span>
+                        </td>
+                      )}
+                      <td className="table-cell text-gray-500 max-w-xs truncate text-sm">
+                        {entry.comment || <span className="italic text-gray-300">—</span>}
+                      </td>
+                      {isAdmin && (
+                        <td className="table-cell">
+                          <button onClick={() => setCancelTarget({ id: entry.id, ref: entry.reference })}
+                            className="text-red-400 hover:text-red-600 transition-colors" title="Annuler cette entrée">
+                            <Trash2 size={14} />
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
         <Pagination
           currentPage={entriesPage.currentPage}
