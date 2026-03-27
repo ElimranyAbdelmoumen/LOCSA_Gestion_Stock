@@ -589,7 +589,7 @@ const Entries = () => {
       <ConfirmDialog
         isOpen={!!cancelTarget}
         title="Annuler cette entrée ?"
-        message={`L'entrée ${cancelTarget?.ref || ''} sera supprimée et le stock recalculé. Si des sorties ont utilisé ce stock, elles seront également supprimées automatiquement.`}
+        message={`L'entrée ${cancelTarget?.ref || ''} sera supprimée et le stock recalculé.`}
         confirmLabel="Annuler l'entrée"
         onConfirm={handleCancelEntry}
         onCancel={() => setCancelTarget(null)}

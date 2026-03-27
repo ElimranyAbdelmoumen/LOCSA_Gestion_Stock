@@ -6,10 +6,8 @@ import com.locsa.stock.dto.StockEntryResponse;
 import com.locsa.stock.entity.City;
 import com.locsa.stock.entity.Product;
 import com.locsa.stock.entity.StockEntry;
-import com.locsa.stock.entity.StockExit;
 import com.locsa.stock.repository.ProductRepository;
 import com.locsa.stock.repository.StockEntryRepository;
-import com.locsa.stock.repository.StockExitRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -27,7 +25,6 @@ import java.util.stream.Collectors;
 public class StockEntryService {
 
     private final StockEntryRepository stockEntryRepository;
-    private final StockExitRepository stockExitRepository;
     private final ProductRepository productRepository;
     private final ReferenceService referenceService;
     private final AuditService auditService;
@@ -125,31 +122,10 @@ public class StockEntryService {
         StockEntry entry = stockEntryRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Entrée introuvable"));
         Product product = entry.getProduct();
-        long newStock = product.getQuantity() - entry.getQuantity();
-
-        // If stock would go negative, cascade delete exits (newest first) until balanced
-        int deletedExits = 0;
-        if (newStock < 0) {
-            long deficit = Math.abs(newStock);
-            List<StockExit> exits = stockExitRepository.findByProductIdOrderByDateExitDesc(product.getId());
-            for (StockExit exit : exits) {
-                if (deficit <= 0) break;
-                deficit -= exit.getQuantity();
-                auditService.log("STOCK_EXIT", exit.getId(), "CANCEL", username,
-                        "Sortie annulée en cascade (entrée annulée): ref=" + exit.getReference(), exit.getCity());
-                stockExitRepository.deleteById(exit.getId());
-                deletedExits++;
-            }
-            newStock = Math.max(0, newStock);
-        }
-
-        product.setQuantity(newStock);
+        product.setQuantity(product.getQuantity() - entry.getQuantity());
         productRepository.save(product);
         auditService.log("STOCK_ENTRY", id, "CANCEL", username,
-                "Annulation entrée: " + product.getName() + " qté=" + entry.getQuantity()
-                + " ref=" + entry.getReference()
-                + (deletedExits > 0 ? " — " + deletedExits + " sortie(s) supprimée(s) en cascade" : ""),
-                entry.getCity());
+                "Annulation entrée: " + product.getName() + " qté=" + entry.getQuantity() + " ref=" + entry.getReference(), entry.getCity());
         stockEntryRepository.deleteById(id);
     }
 
