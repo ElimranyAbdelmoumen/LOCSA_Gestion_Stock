@@ -45,7 +45,7 @@ services:
       - "traefik.enable=true"
 
       # API router
-      - "traefik.http.routers.locsa-api.rule=Host(`locsa.ma`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.locsa-api.rule=Host(`locsamaroc.tech`) && PathPrefix(`/api`)"
       - "traefik.http.routers.locsa-api.entrypoints=websecure"
       - "traefik.http.routers.locsa-api.tls=true"
       - "traefik.http.routers.locsa-api.tls.certresolver=myresolver"
@@ -63,7 +63,7 @@ services:
       - "traefik.enable=true"
 
       # Front router
-      - "traefik.http.routers.locsa-front.rule=Host(`locsa.ma`) || Host(`www.locsa.ma`)"
+      - "traefik.http.routers.locsa-front.rule=Host(`locsamaroc.tech`) || Host(`www.locsa.ma`)"
       - "traefik.http.routers.locsa-front.entrypoints=websecure"
       - "traefik.http.routers.locsa-front.tls=true"
       - "traefik.http.routers.locsa-front.tls.certresolver=myresolver"
