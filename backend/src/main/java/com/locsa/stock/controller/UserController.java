@@ -17,11 +17,13 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -120,18 +122,23 @@ public class UserController {
         try {
             User user = userRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
-            String ext = ct.substring(ct.lastIndexOf('/') + 1).replaceAll("[^a-zA-Z0-9]", "").toLowerCase();
-            if (ext.equals("jpeg")) ext = "jpg";
-            if (ext.isBlank()) ext = "jpg";
-            String filename = id + "_" + UUID.randomUUID().toString().substring(0, 8) + "." + ext;
+            // Convert any image type to PNG
+            BufferedImage image = ImageIO.read(file.getInputStream());
+            if (image == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Format d'image non supporté"));
+            }
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ImageIO.write(image, "png", baos);
+            byte[] pngBytes = baos.toByteArray();
+
+            String filename = id + "_" + UUID.randomUUID().toString().substring(0, 8) + ".png";
             Path dir = Paths.get(uploadDir, "avatars");
             Files.createDirectories(dir);
             // Delete old avatar if present
             if (user.getAvatarPath() != null) {
                 try { Files.deleteIfExists(Paths.get(uploadDir, user.getAvatarPath())); } catch (Exception ignored) {}
             }
-            Path dest = dir.resolve(filename);
-            Files.copy(file.getInputStream(), dest, StandardCopyOption.REPLACE_EXISTING);
+            Files.write(dir.resolve(filename), pngBytes);
             user.setAvatarPath("avatars/" + filename);
             userRepository.save(user);
             return ResponseEntity.ok(Map.of("avatarUrl", "/api/users/" + id + "/avatar"));
@@ -151,13 +158,7 @@ public class UserController {
             Path path = Paths.get(uploadDir, user.getAvatarPath());
             if (!Files.exists(path)) return ResponseEntity.notFound().build();
             byte[] bytes = Files.readAllBytes(path);
-            String ext = path.getFileName().toString().toLowerCase();
-            MediaType mt;
-            if (ext.endsWith("png")) mt = MediaType.IMAGE_PNG;
-            else if (ext.endsWith("gif")) mt = MediaType.IMAGE_GIF;
-            else if (ext.endsWith("webp")) mt = MediaType.parseMediaType("image/webp");
-            else mt = MediaType.IMAGE_JPEG;
-            return ResponseEntity.ok().contentType(mt).body(bytes);
+            return ResponseEntity.ok().contentType(MediaType.IMAGE_PNG).body(bytes);
         } catch (IOException e) {
             return ResponseEntity.internalServerError().build();
         }
