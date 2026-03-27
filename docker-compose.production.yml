@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   postgres:
     image: postgres:15
@@ -19,40 +17,40 @@ services:
       timeout: 5s
       retries: 5
 
-    backend:
-      image: ${BACKEND_IMAGE}
-      container_name: locsa_backend
-      restart: unless-stopped
-      environment:
-        SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-locsa_db}
-        SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-locsa_user}
-        SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-locsa_password}
-        JWT_SECRET: ${JWT_SECRET}
-        JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
-      volumes:
-        - ./uploads:/app/uploads
-      labels:
-        - "traefik.enable=true"
-        - "traefik.http.routers.api.rule=Host(`locsamaroc.tech`) && PathPrefix(`/api`)"
-        - "traefik.http.routers.api.entrypoints=websecure"
-        - "traefik.http.routers.api.tls.certresolver=myresolver"
-        - "traefik.http.services.api.loadbalancer.server.port=8080"
-      depends_on:
-        postgres:
-          condition: service_healthy
+  backend:
+    image: ${BACKEND_IMAGE}
+    container_name: locsa_backend
+    restart: unless-stopped
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-locsa_db}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-locsa_user}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-locsa_password}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
+    volumes:
+      - ./uploads:/app/uploads
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=Host(`locsamaroc.tech`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.api.entrypoints=websecure"
+      - "traefik.http.routers.api.tls.certresolver=myresolver"
+      - "traefik.http.services.api.loadbalancer.server.port=8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
 
-    frontend:
-      image: ${FRONTEND_IMAGE}
-      container_name: locsa_frontend
-      restart: unless-stopped
-      labels:
-        - "traefik.enable=true"
-        - "traefik.http.routers.front.rule=Host(`locsamaroc.tech`)"
-        - "traefik.http.routers.front.entrypoints=websecure"
-        - "traefik.http.routers.front.tls.certresolver=myresolver"
-        - "traefik.http.services.front.loadbalancer.server.port=80"
-      depends_on:
-        - backend
+  frontend:
+    image: ${FRONTEND_IMAGE}
+    container_name: locsa_frontend
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.front.rule=Host(`locsamaroc.tech`)"
+      - "traefik.http.routers.front.entrypoints=websecure"
+      - "traefik.http.routers.front.tls.certresolver=myresolver"
+      - "traefik.http.services.front.loadbalancer.server.port=80"
+    depends_on:
+      - backend
 
 volumes:
   postgres_data:
