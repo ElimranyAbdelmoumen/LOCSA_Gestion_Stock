@@ -16,7 +16,7 @@ echo "Configuration Nginx pour : $DOMAIN"
 # Config Nginx
 sudo tee /etc/nginx/sites-available/locsa > /dev/null <<EOF
 server {
-    listen 80;
+    listen 81;
     server_name $DOMAIN www.$DOMAIN;
 
     location / {
