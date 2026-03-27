@@ -17,10 +17,13 @@ echo "Configuration Nginx pour : $DOMAIN"
 sudo tee /etc/nginx/sites-available/locsa > /dev/null <<EOF
 server {
     listen 80;
-    server_name locsamaroc.tech www.locsamaroc.tech;
+    server_name _;
 
-    location / {
-        proxy_pass http://127.0.0.1:81;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    location /api/ {
+        proxy_pass http://locsa_backend:8080/api/;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -28,13 +31,8 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    location /api/ {
-        proxy_pass http://127.0.0.1:8080/api/;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+    location / {
+        try_files $uri $uri/ /index.html;
     }
 }
 EOF
