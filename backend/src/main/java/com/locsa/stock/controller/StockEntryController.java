@@ -15,7 +15,9 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/entries")
@@ -34,17 +36,22 @@ public class StockEntryController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         boolean isAdmin = auth.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_ADMIN"));
-        City cityEnum;
+        Set<City> userCities = null;
+        City cityFilter = null;
         if (isAdmin) {
-            cityEnum = null;
             if (city != null && !city.isBlank()) {
-                try { cityEnum = City.valueOf(city.toUpperCase()); } catch (IllegalArgumentException ignored) {}
+                try { cityFilter = City.valueOf(city.toUpperCase()); } catch (IllegalArgumentException ignored) {}
             }
         } else {
             User user = userRepository.findByUsername(auth.getName()).orElseThrow();
-            cityEnum = user.getCity();
+            userCities = new HashSet<>();
+            if (user.getCity() != null) userCities.add(user.getCity());
+            if (user.getAdditionalCities() != null) userCities.addAll(user.getAdditionalCities());
+            if (city != null && !city.isBlank()) {
+                try { cityFilter = City.valueOf(city.toUpperCase()); } catch (IllegalArgumentException ignored) {}
+            }
         }
-        return ResponseEntity.ok(stockEntryService.getAllEntries(auth.getName(), isAdmin, cityEnum, dateFrom, dateTo, page, size));
+        return ResponseEntity.ok(stockEntryService.getAllEntries(auth.getName(), isAdmin, userCities, cityFilter, dateFrom, dateTo, page, size));
     }
 
     @DeleteMapping("/{id}")

@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,30 +30,44 @@ public class StockEntryService {
     private final ReferenceService referenceService;
     private final AuditService auditService;
 
-    public PageResponse<StockEntryResponse> getAllEntries(String username, boolean isAdmin, City city, LocalDate dateFrom, LocalDate dateTo, int page, int size) {
+    public PageResponse<StockEntryResponse> getAllEntries(String username, boolean isAdmin, Set<City> userCities, City cityFilter, LocalDate dateFrom, LocalDate dateTo, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<StockEntry> result;
         boolean hasDateFilter = dateFrom != null && dateTo != null;
-        if (city != null) {
-            if (hasDateFilter) {
-                result = isAdmin
-                    ? stockEntryRepository.findByCityAndDateEntryBetweenOrderByDateEntryDesc(city, dateFrom, dateTo, pageable)
-                    : stockEntryRepository.findByCreatedByAndCityAndDateEntryBetweenOrderByDateEntryDesc(username, city, dateFrom, dateTo, pageable);
+
+        if (isAdmin) {
+            // Admin: optional city filter, otherwise all
+            if (cityFilter != null) {
+                result = hasDateFilter
+                    ? stockEntryRepository.findByCityAndDateEntryBetweenOrderByDateEntryDesc(cityFilter, dateFrom, dateTo, pageable)
+                    : stockEntryRepository.findByCityOrderByDateEntryDesc(cityFilter, pageable);
             } else {
-                result = isAdmin
-                    ? stockEntryRepository.findByCityOrderByDateEntryDesc(city, pageable)
-                    : stockEntryRepository.findByCreatedByAndCityOrderByDateEntryDesc(username, city, pageable);
+                result = hasDateFilter
+                    ? stockEntryRepository.findByDateEntryBetweenOrderByDateEntryDesc(dateFrom, dateTo, pageable)
+                    : stockEntryRepository.findAllByOrderByDateEntryDesc(pageable);
+            }
+        } else if (userCities != null && userCities.size() == 1) {
+            // Single-city user: use fast single-city queries
+            City city = userCities.iterator().next();
+            result = hasDateFilter
+                ? stockEntryRepository.findByCreatedByAndCityAndDateEntryBetweenOrderByDateEntryDesc(username, city, dateFrom, dateTo, pageable)
+                : stockEntryRepository.findByCreatedByAndCityOrderByDateEntryDesc(username, city, pageable);
+        } else if (userCities != null && userCities.size() > 1) {
+            // Multi-city user: filter by effective city (specific or all their cities)
+            City effective = (cityFilter != null && userCities.contains(cityFilter)) ? cityFilter : null;
+            if (effective != null) {
+                result = hasDateFilter
+                    ? stockEntryRepository.findByCreatedByAndCityAndDateEntryBetweenOrderByDateEntryDesc(username, effective, dateFrom, dateTo, pageable)
+                    : stockEntryRepository.findByCreatedByAndCityOrderByDateEntryDesc(username, effective, pageable);
+            } else {
+                result = hasDateFilter
+                    ? stockEntryRepository.findByCityInAndDateEntryBetweenOrderByDateEntryDesc(userCities, dateFrom, dateTo, pageable)
+                    : stockEntryRepository.findByCityInOrderByDateEntryDesc(userCities, pageable);
             }
         } else {
-            if (hasDateFilter) {
-                result = isAdmin
-                    ? stockEntryRepository.findByDateEntryBetweenOrderByDateEntryDesc(dateFrom, dateTo, pageable)
-                    : stockEntryRepository.findByCreatedByAndDateEntryBetweenOrderByDateEntryDesc(username, dateFrom, dateTo, pageable);
-            } else {
-                result = isAdmin
-                    ? stockEntryRepository.findAllByOrderByDateEntryDesc(pageable)
-                    : stockEntryRepository.findByCreatedByOrderByDateEntryDesc(username, pageable);
-            }
+            result = hasDateFilter
+                ? stockEntryRepository.findByCreatedByAndDateEntryBetweenOrderByDateEntryDesc(username, dateFrom, dateTo, pageable)
+                : stockEntryRepository.findByCreatedByOrderByDateEntryDesc(username, pageable);
         }
         return PageResponse.of(result, result.getContent().stream().map(this::toResponse).collect(Collectors.toList()));
     }

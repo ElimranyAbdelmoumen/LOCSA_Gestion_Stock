@@ -57,9 +57,9 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (credentials) => {
     const response = await loginApi(credentials)
-    const { token, username, role, city, id, avatarUrl } = response.data
+    const { token, username, role, city, id, avatarUrl, cities } = response.data
     const expiresAt = getTokenExpiry(token)
-    const userData = { id, username, role, city, avatarUrl }
+    const userData = { id, username, role, city, avatarUrl, cities: cities || (city ? [city] : []) }
     localStorage.setItem('user', JSON.stringify(userData))
     if (expiresAt) localStorage.setItem('expiresAt', String(expiresAt))
     setUser(userData)
@@ -105,6 +105,7 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated: !!user,
     isAdmin: user?.role === 'ADMIN',
     userCity: user?.city || null,
+    userCities: user?.cities || (user?.city ? [user.city] : []),
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

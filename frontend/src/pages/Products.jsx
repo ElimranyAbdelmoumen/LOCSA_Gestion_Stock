@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react'
 import { getProducts, getProductsPaginated, createProduct, updateProduct, deleteProduct, getProductHistory } from '../api/products'
 import { getStockByProduct } from '../api/dashboard'
+import { getEntries } from '../api/entries'
+import { getExits } from '../api/exits'
 import AlertBadge from '../components/AlertBadge'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { useToast } from '../context/ToastContext'
 import { useAuth } from '../context/AuthContext'
 import Pagination from '../components/Pagination'
-import { exportToExcel } from '../utils/exportUtils'
-import { Plus, Pencil, Trash2, X, Loader2, Search, Package, History, TrendingUp, TrendingDown, ClipboardList, FileDown, LayoutGrid, MapPin } from 'lucide-react'
+import { exportToExcel, exportToExcelMultiSheet } from '../utils/exportUtils'
+import { Plus, Pencil, Trash2, X, Loader2, Search, Package, History, TrendingUp, TrendingDown, ClipboardList, FileDown, LayoutGrid, MapPin, CalendarRange } from 'lucide-react'
 
 const CATEGORIES = [
   { value: 'A', label: 'Catégorie A', color: 'bg-purple-100 text-purple-700' },
@@ -17,9 +19,21 @@ const CATEGORIES = [
 
 const emptyForm = { name: '', description: '', quantity: '', category: 'C', minQuantity: '0' }
 
+const CITIES = [
+  { value: 'TANGER',     label: 'Tanger' },
+  { value: 'MEKNES',     label: 'Meknès' },
+  { value: 'CASABLANCA', label: 'Casablanca' },
+]
+
 const Products = () => {
   const toast = useToast()
-  const { isAdmin } = useAuth()
+  const { isAdmin, userCity, userCities } = useAuth()
+
+  // Export filtré modal
+  const [showExportModal, setShowExportModal] = useState(false)
+  const [exportFilters, setExportFilters] = useState({ city: '', dateFrom: '', dateTo: '' })
+  const [exportLoading, setExportLoading] = useState(false)
+  const [exportErrors, setExportErrors] = useState({})
   const [view, setView] = useState('catalogue') // 'catalogue' | 'stock-ville'
   const [stockByProduct, setStockByProduct] = useState([])
   const [stockLoading, setStockLoading] = useState(false)
@@ -210,6 +224,90 @@ const Products = () => {
     (p.description || '').toLowerCase().includes(search.toLowerCase())
   )
 
+  const openExportModal = () => {
+    const defaultCity = !isAdmin ? (userCity || '') : ''
+    setExportFilters({ city: defaultCity, dateFrom: '', dateTo: '' })
+    setExportErrors({})
+    setShowExportModal(true)
+  }
+
+  const handleExportFiltered = async (e) => {
+    e.preventDefault()
+    const errs = {}
+    if (!exportFilters.dateFrom) errs.dateFrom = 'Date de début requise'
+    if (!exportFilters.dateTo)   errs.dateTo   = 'Date de fin requise'
+    if (exportFilters.dateFrom && exportFilters.dateTo && exportFilters.dateFrom > exportFilters.dateTo)
+      errs.dateTo = 'La date de fin doit être après la date de début'
+    if (Object.keys(errs).length > 0) { setExportErrors(errs); return }
+
+    setExportLoading(true)
+    try {
+      const city = exportFilters.city || undefined
+      const [entriesRes, exitsRes] = await Promise.all([
+        getEntries(city, exportFilters.dateFrom, exportFilters.dateTo, 0, 2000),
+        getExits(city, exportFilters.dateFrom, exportFilters.dateTo, 0, 2000),
+      ])
+      const entries = entriesRes.data.content ?? entriesRes.data
+      const exits   = exitsRes.data.content ?? exitsRes.data
+
+      const cityLabel = exportFilters.city
+        ? CITIES.find(c => c.value === exportFilters.city)?.label || exportFilters.city
+        : 'Toutes villes'
+      const period = `${exportFilters.dateFrom} → ${exportFilters.dateTo}`
+
+      await exportToExcelMultiSheet([
+        {
+          name: 'Entrées',
+          title: `Entrées de Stock — ${cityLabel} — ${period}`,
+          rows: entries,
+          columns: [
+            { key: 'reference',       header: 'Réf.',          width: 18 },
+            { key: 'productName',     header: 'Produit',        width: 28 },
+            { key: 'productCategory', header: 'Cat.',           width: 8  },
+            { key: 'city',            header: 'Ville',          width: 14 },
+            { key: 'quantity',        header: 'Qté',            width: 10 },
+            { key: 'dateEntry',       header: 'Date',           width: 14 },
+            { key: 'createdBy',       header: 'Effectué par',   width: 18 },
+            { key: 'station',         header: 'Station',        width: 18 },
+            { key: 'code',            header: 'Code',           width: 14 },
+            { key: 'serialNumber',    header: 'N° Série',       width: 16 },
+            { key: 'brand',           header: 'Marque',         width: 16 },
+            { key: 'power',           header: 'Puissance',      width: 14 },
+            { key: 'comment',         header: 'Commentaire',    width: 30 },
+          ],
+        },
+        {
+          name: 'Sorties',
+          title: `Sorties de Stock — ${cityLabel} — ${period}`,
+          rows: exits,
+          columns: [
+            { key: 'reference',       header: 'Réf.',          width: 18 },
+            { key: 'productName',     header: 'Produit',        width: 28 },
+            { key: 'productCategory', header: 'Cat.',           width: 8  },
+            { key: 'city',            header: 'Ville',          width: 14 },
+            { key: 'quantity',        header: 'Qté',            width: 10 },
+            { key: 'dateExit',        header: 'Date',           width: 14 },
+            { key: 'beneficiary',     header: 'Bénéficiaire',   width: 22 },
+            { key: 'createdBy',       header: 'Effectué par',   width: 18 },
+            { key: 'siteName',        header: 'Site',           width: 20 },
+            { key: 'gasoilType',      header: 'Type gasoil',    width: 14 },
+            { key: 'immatriculation', header: 'Immatriculation',width: 16 },
+            { key: 'code',            header: 'Code',           width: 14 },
+            { key: 'serialNumber',    header: 'N° Série',       width: 16 },
+            { key: 'comment',         header: 'Commentaire',    width: 30 },
+          ],
+        },
+      ], `rapport-stock-${exportFilters.city || 'all'}-${exportFilters.dateFrom}`)
+
+      toast.success(`Export réussi — ${entries.length} entrées, ${exits.length} sorties`)
+      setShowExportModal(false)
+    } catch {
+      toast.error("Erreur lors de l'export.")
+    } finally {
+      setExportLoading(false)
+    }
+  }
+
   const handleExport = () => {
     exportToExcel(filtered, 'produits-stock', [
       { key: 'name',        header: 'Nom du produit',  width: 30 },
@@ -231,12 +329,17 @@ const Products = () => {
         <div className="flex items-center gap-2">
           {view === 'catalogue' && (
             <>
-              <button onClick={handleExport} className="btn-secondary flex items-center gap-2">
-                <FileDown size={16} /> Exporter Excel
+              <button onClick={openExportModal} className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-sm">
+                <CalendarRange size={15} /> Rapport filtré
               </button>
-              <button onClick={openCreate} className="btn-primary flex items-center gap-2">
-                <Plus size={16} /> Nouveau Produit
+              <button onClick={handleExport} className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors">
+                <FileDown size={15} /> Catalogue
               </button>
+              {isAdmin && (
+                <button onClick={openCreate} className="btn-primary flex items-center gap-2">
+                  <Plus size={16} /> Nouveau Produit
+                </button>
+              )}
             </>
           )}
           {view === 'stock-ville' && (
@@ -588,6 +691,71 @@ const Products = () => {
         onConfirm={handleConfirmDelete}
         onCancel={() => setConfirmDelete(null)}
       />
+
+      {/* Export filtré Modal */}
+      {showExportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <CalendarRange size={18} className="text-blue-600" />
+                <h3 className="text-lg font-semibold text-gray-800">Rapport de stock filtré</h3>
+              </div>
+              <button onClick={() => setShowExportModal(false)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+            </div>
+            <form onSubmit={handleExportFiltered} className="p-6 space-y-4">
+              <p className="text-sm text-gray-500">Génère un fichier Excel avec deux feuilles — <strong>Entrées</strong> et <strong>Sorties</strong> — pour la période et la ville sélectionnées.</p>
+
+              {/* City */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Ville</label>
+                <div className="flex gap-2 flex-wrap">
+                  {isAdmin && (
+                    <button type="button"
+                      onClick={() => setExportFilters(p => ({ ...p, city: '' }))}
+                      className={`px-3 py-2 text-sm font-medium rounded-lg border transition-all ${exportFilters.city === '' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
+                      Toutes
+                    </button>
+                  )}
+                  {(isAdmin ? CITIES : CITIES.filter(c => (userCities || [userCity]).includes(c.value))).map(c => (
+                    <button key={c.value} type="button"
+                      onClick={() => setExportFilters(p => ({ ...p, city: c.value }))}
+                      className={`px-3 py-2 text-sm font-medium rounded-lg border transition-all ${exportFilters.city === c.value ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
+                      {c.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Date range */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Du <span className="text-red-500">*</span></label>
+                  <input type="date" value={exportFilters.dateFrom}
+                    onChange={e => { setExportFilters(p => ({ ...p, dateFrom: e.target.value })); setExportErrors(p => ({ ...p, dateFrom: '' })) }}
+                    className={`input-field text-sm ${exportErrors.dateFrom ? 'border-red-400' : ''}`} />
+                  {exportErrors.dateFrom && <p className="mt-1 text-xs text-red-500">{exportErrors.dateFrom}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Au <span className="text-red-500">*</span></label>
+                  <input type="date" value={exportFilters.dateTo}
+                    onChange={e => { setExportFilters(p => ({ ...p, dateTo: e.target.value })); setExportErrors(p => ({ ...p, dateTo: '' })) }}
+                    className={`input-field text-sm ${exportErrors.dateTo ? 'border-red-400' : ''}`} />
+                  {exportErrors.dateTo && <p className="mt-1 text-xs text-red-500">{exportErrors.dateTo}</p>}
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setShowExportModal(false)} className="btn-secondary flex-1">Annuler</button>
+                <button type="submit" disabled={exportLoading} className="btn-primary flex-1 flex items-center justify-center gap-2">
+                  {exportLoading ? <Loader2 size={16} className="animate-spin" /> : <FileDown size={16} />}
+                  {exportLoading ? 'Export en cours...' : 'Télécharger'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* History Modal */}
       {historyProduct && (

@@ -4,9 +4,10 @@ import com.locsa.stock.entity.City;
 import com.locsa.stock.entity.Role;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
+import java.util.HashSet;
+import java.util.Set;
 
 @Data
 public class RegisterRequest {
@@ -22,8 +23,11 @@ public class RegisterRequest {
     @NotNull(message = "Role is required")
     private Role role;
 
-    private City city; // required for USER, null for ADMIN
+    private City city; // primary city, required for USER
 
+    private Set<City> additionalCities = new HashSet<>(); // extra cities for USER
+
+    @NotBlank(message = "L'email est requis")
     @jakarta.validation.constraints.Email(message = "Email invalide")
-    private String email; // optional, used to send credentials
+    private String email; // required — used for login and welcome email
 }

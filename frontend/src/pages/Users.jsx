@@ -20,7 +20,7 @@ const CITY_COLORS = {
   CASABLANCA: 'bg-orange-100 text-orange-700',
 }
 
-const emptyCreateForm = { username: '', password: '', role: 'USER', city: '', email: '' }
+const emptyCreateForm = { username: '', password: '', role: 'USER', city: '', additionalCities: [], email: '' }
 
 const Users = () => {
   const { user: currentUser, updateAvatar } = useAuth()
@@ -39,7 +39,7 @@ const Users = () => {
 
   // Edit modal
   const [editUser, setEditUser] = useState(null) // user object
-  const [editForm, setEditForm] = useState({ username: '', role: '', city: '' })
+  const [editForm, setEditForm] = useState({ username: '', role: '', city: '', additionalCities: [], email: '' })
   const [editErrors, setEditErrors] = useState({})
   const [editLoading, setEditLoading] = useState(false)
   const [editError, setEditError] = useState('')
@@ -98,6 +98,7 @@ const Users = () => {
     if (!createForm.password) errs.password = 'Le mot de passe est requis'
     else if (createForm.password.length < 6) errs.password = 'Minimum 6 caractères'
     if (createForm.role === 'USER' && !createForm.city) errs.city = 'La ville est requise'
+    if (!createForm.email.trim()) errs.email = "L'email est requis"
     return errs
   }
 
@@ -122,7 +123,8 @@ const Users = () => {
         password: createForm.password,
         role: createForm.role,
         city: createForm.role === 'USER' ? createForm.city : null,
-        email: createForm.email.trim() || null,
+        additionalCities: createForm.role === 'USER' ? createForm.additionalCities : [],
+        email: createForm.email.trim(),
       })
       toast.success('Compte créé avec succès')
       setShowCreate(false)
@@ -138,7 +140,8 @@ const Users = () => {
   /* ── EDIT ── */
   const openEdit = (u) => {
     setEditUser(u)
-    setEditForm({ username: u.username, role: u.role, city: u.city || '', email: u.email || '' })
+    const additionalCities = u.cities ? u.cities.filter(c => c !== u.city) : []
+    setEditForm({ username: u.username, role: u.role, city: u.city || '', additionalCities, email: u.email || '' })
     setEditErrors({})
     setEditError('')
   }
@@ -171,6 +174,7 @@ const Users = () => {
         username: editForm.username.trim(),
         role: editForm.role,
         city: editForm.role === 'USER' ? editForm.city : null,
+        additionalCities: editForm.role === 'USER' ? editForm.additionalCities : [],
         email: editForm.email.trim() || null,
       })
       toast.success('Utilisateur modifié')
@@ -331,11 +335,15 @@ const Users = () => {
                       )}
                     </td>
                     <td className="table-cell">
-                      {u.city ? (
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${CITY_COLORS[u.city] || 'bg-gray-100 text-gray-600'}`}>
-                          <MapPin size={10} />
-                          {CITIES.find(c => c.value === u.city)?.label || u.city}
-                        </span>
+                      {u.cities && u.cities.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {u.cities.map(c => (
+                            <span key={c} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${CITY_COLORS[c] || 'bg-gray-100 text-gray-600'}`}>
+                              <MapPin size={10} />
+                              {CITIES.find(city => city.value === c)?.label || c}
+                            </span>
+                          ))}
+                        </div>
                       ) : (
                         <span className="text-gray-300 italic text-xs">—</span>
                       )}
@@ -433,26 +441,62 @@ const Users = () => {
                 </select>
               </div>
               {createForm.role === 'USER' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Ville <span className="text-red-500">*</span></label>
-                  <div className="flex gap-2">
-                    {CITIES.map(c => (
-                      <button key={c.value} type="button"
-                        onClick={() => { setCreateForm(prev => ({ ...prev, city: c.value })); setCreateErrors(prev => ({ ...prev, city: '' })) }}
-                        className={`flex-1 py-2 text-sm font-medium rounded-lg border transition-all ${
-                          createForm.city === c.value ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'
-                        }`}>{c.label}</button>
-                    ))}
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Ville principale <span className="text-red-500">*</span></label>
+                    <div className="flex gap-2">
+                      {CITIES.map(c => (
+                        <button key={c.value} type="button"
+                          onClick={() => {
+                            setCreateForm(prev => ({
+                              ...prev,
+                              city: c.value,
+                              additionalCities: prev.additionalCities.filter(ac => ac !== c.value)
+                            }))
+                            setCreateErrors(prev => ({ ...prev, city: '' }))
+                          }}
+                          className={`flex-1 py-2 text-sm font-medium rounded-lg border transition-all ${
+                            createForm.city === c.value ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                          }`}>{c.label}</button>
+                      ))}
+                    </div>
+                    {createErrors.city && <p className="mt-1 text-xs text-red-500">{createErrors.city}</p>}
                   </div>
-                  {createErrors.city && <p className="mt-1 text-xs text-red-500">{createErrors.city}</p>}
-                </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Villes supplémentaires <span className="text-gray-400 font-normal">(optionnel)</span>
+                    </label>
+                    <div className="flex gap-3">
+                      {CITIES.filter(c => c.value !== createForm.city).map(c => (
+                        <label key={c.value} className="flex items-center gap-1.5 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={createForm.additionalCities.includes(c.value)}
+                            onChange={e => {
+                              setCreateForm(prev => ({
+                                ...prev,
+                                additionalCities: e.target.checked
+                                  ? [...prev.additionalCities, c.value]
+                                  : prev.additionalCities.filter(ac => ac !== c.value)
+                              }))
+                            }}
+                            className="w-4 h-4 rounded border-gray-300 text-blue-600"
+                          />
+                          <span className="text-sm text-gray-600">{c.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </>
               )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email <span className="text-gray-400 font-normal">(optionnel — pour recevoir les identifiants)</span>
+                  Email <span className="text-red-500">*</span>
+                  <span className="text-gray-400 font-normal ml-1">(utilisé pour la connexion)</span>
                 </label>
                 <input type="email" name="email" value={createForm.email} onChange={handleCreateChange}
-                  className="input-field" placeholder="ex: utilisateur@email.com" autoComplete="off" />
+                  className={`input-field ${createErrors.email ? 'border-red-400' : ''}`} placeholder="ex: utilisateur@email.com" autoComplete="off" />
+                {createErrors.email && <p className="mt-1 text-xs text-red-500">{createErrors.email}</p>}
               </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowCreate(false)} className="btn-secondary flex-1">Annuler</button>
@@ -494,26 +538,58 @@ const Users = () => {
                     </select>
                   </div>
                   {editForm.role === 'USER' && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Ville <span className="text-red-500">*</span></label>
-                      <div className="flex gap-2">
-                        {CITIES.map(c => (
-                          <button key={c.value} type="button"
-                            onClick={() => { setEditForm(prev => ({ ...prev, city: c.value })); setEditErrors(prev => ({ ...prev, city: '' })) }}
-                            className={`flex-1 py-2 text-sm font-medium rounded-lg border transition-all ${
-                              editForm.city === c.value ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'
-                            }`}>{c.label}</button>
-                        ))}
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Ville principale <span className="text-red-500">*</span></label>
+                        <div className="flex gap-2">
+                          {CITIES.map(c => (
+                            <button key={c.value} type="button"
+                              onClick={() => {
+                                setEditForm(prev => ({
+                                  ...prev,
+                                  city: c.value,
+                                  additionalCities: prev.additionalCities.filter(ac => ac !== c.value)
+                                }))
+                                setEditErrors(prev => ({ ...prev, city: '' }))
+                              }}
+                              className={`flex-1 py-2 text-sm font-medium rounded-lg border transition-all ${
+                                editForm.city === c.value ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                              }`}>{c.label}</button>
+                          ))}
+                        </div>
+                        {editErrors.city && <p className="mt-1 text-xs text-red-500">{editErrors.city}</p>}
                       </div>
-                      {editErrors.city && <p className="mt-1 text-xs text-red-500">{editErrors.city}</p>}
-                    </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Villes supplémentaires <span className="text-gray-400 font-normal">(optionnel)</span>
+                        </label>
+                        <div className="flex gap-3">
+                          {CITIES.filter(c => c.value !== editForm.city).map(c => (
+                            <label key={c.value} className="flex items-center gap-1.5 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={editForm.additionalCities.includes(c.value)}
+                                onChange={e => {
+                                  setEditForm(prev => ({
+                                    ...prev,
+                                    additionalCities: e.target.checked
+                                      ? [...prev.additionalCities, c.value]
+                                      : prev.additionalCities.filter(ac => ac !== c.value)
+                                  }))
+                                }}
+                                className="w-4 h-4 rounded border-gray-300 text-blue-600"
+                              />
+                              <span className="text-sm text-gray-600">{c.label}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    </>
                   )}
                 </>
               )}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email <span className="text-gray-400 font-normal">(optionnel)</span>
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                 <input type="email" name="email" value={editForm.email} onChange={handleEditChange}
                   className="input-field" placeholder="ex: utilisateur@email.com" />
               </div>

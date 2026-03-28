@@ -69,13 +69,18 @@ public class EmailService {
                   <p style="margin:0 0 8px;color:#1e40af;font-size:14px"><strong>Email (identifiant) :</strong> %s</p>
                   <p style="margin:0;color:#1e40af;font-size:14px"><strong>Mot de passe :</strong> %s</p>
                 </div>
+                <div style="text-align:center;margin:24px 0">
+                  <a href="%s" style="background:#1d4ed8;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-size:15px;font-weight:bold">
+                    Accéder à la plateforme
+                  </a>
+                </div>
                 <p style="color:#6b7280;font-size:13px">Pour des raisons de sécurité, changez votre mot de passe dès votre première connexion.</p>
                 <p style="color:#9ca3af;font-size:12px;margin-top:32px;border-top:1px solid #e5e7eb;padding-top:16px">
                   LOCSA SARL · Énergie · Service · Telecom
                 </p>
               </div>
             </div>
-            """.formatted(username, email, password);
+            """.formatted(username, email, password, frontendUrl);
     }
 
     private String buildResetHtml(String resetLink) {

@@ -2,6 +2,8 @@ package com.locsa.stock.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "users")
@@ -27,7 +29,14 @@ public class User {
 
     @Enumerated(EnumType.STRING)
     @Column(columnDefinition = "varchar(20)")
-    private City city; // null for ADMIN
+    private City city; // primary city, null for ADMIN
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "user_additional_cities", joinColumns = @JoinColumn(name = "user_id"))
+    @Enumerated(EnumType.STRING)
+    @Column(name = "city")
+    @Builder.Default
+    private Set<City> additionalCities = new HashSet<>();
 
     @Column(nullable = false, columnDefinition = "boolean default true")
     @Builder.Default

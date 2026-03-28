@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -34,30 +35,41 @@ public class StockExitService {
     private final ReferenceService referenceService;
     private final AuditService auditService;
 
-    public PageResponse<StockExitResponse> getAllExits(String username, boolean isAdmin, City city, LocalDate dateFrom, LocalDate dateTo, int page, int size) {
+    public PageResponse<StockExitResponse> getAllExits(String username, boolean isAdmin, Set<City> userCities, City cityFilter, LocalDate dateFrom, LocalDate dateTo, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<StockExit> result;
         boolean hasDateFilter = dateFrom != null && dateTo != null;
-        if (city != null) {
-            if (hasDateFilter) {
-                result = isAdmin
-                    ? stockExitRepository.findByCityAndDateExitBetweenOrderByDateExitDesc(city, dateFrom, dateTo, pageable)
-                    : stockExitRepository.findByCreatedByAndCityAndDateExitBetweenOrderByDateExitDesc(username, city, dateFrom, dateTo, pageable);
+
+        if (isAdmin) {
+            if (cityFilter != null) {
+                result = hasDateFilter
+                    ? stockExitRepository.findByCityAndDateExitBetweenOrderByDateExitDesc(cityFilter, dateFrom, dateTo, pageable)
+                    : stockExitRepository.findByCityOrderByDateExitDesc(cityFilter, pageable);
             } else {
-                result = isAdmin
-                    ? stockExitRepository.findByCityOrderByDateExitDesc(city, pageable)
-                    : stockExitRepository.findByCreatedByAndCityOrderByDateExitDesc(username, city, pageable);
+                result = hasDateFilter
+                    ? stockExitRepository.findByDateExitBetweenOrderByDateExitDesc(dateFrom, dateTo, pageable)
+                    : stockExitRepository.findAllByOrderByDateExitDesc(pageable);
+            }
+        } else if (userCities != null && userCities.size() == 1) {
+            City city = userCities.iterator().next();
+            result = hasDateFilter
+                ? stockExitRepository.findByCreatedByAndCityAndDateExitBetweenOrderByDateExitDesc(username, city, dateFrom, dateTo, pageable)
+                : stockExitRepository.findByCreatedByAndCityOrderByDateExitDesc(username, city, pageable);
+        } else if (userCities != null && userCities.size() > 1) {
+            City effective = (cityFilter != null && userCities.contains(cityFilter)) ? cityFilter : null;
+            if (effective != null) {
+                result = hasDateFilter
+                    ? stockExitRepository.findByCreatedByAndCityAndDateExitBetweenOrderByDateExitDesc(username, effective, dateFrom, dateTo, pageable)
+                    : stockExitRepository.findByCreatedByAndCityOrderByDateExitDesc(username, effective, pageable);
+            } else {
+                result = hasDateFilter
+                    ? stockExitRepository.findByCityInAndDateExitBetweenOrderByDateExitDesc(userCities, dateFrom, dateTo, pageable)
+                    : stockExitRepository.findByCityInOrderByDateExitDesc(userCities, pageable);
             }
         } else {
-            if (hasDateFilter) {
-                result = isAdmin
-                    ? stockExitRepository.findByDateExitBetweenOrderByDateExitDesc(dateFrom, dateTo, pageable)
-                    : stockExitRepository.findByCreatedByAndDateExitBetweenOrderByDateExitDesc(username, dateFrom, dateTo, pageable);
-            } else {
-                result = isAdmin
-                    ? stockExitRepository.findAllByOrderByDateExitDesc(pageable)
-                    : stockExitRepository.findByCreatedByOrderByDateExitDesc(username, pageable);
-            }
+            result = hasDateFilter
+                ? stockExitRepository.findByCreatedByAndDateExitBetweenOrderByDateExitDesc(username, dateFrom, dateTo, pageable)
+                : stockExitRepository.findByCreatedByOrderByDateExitDesc(username, pageable);
         }
         return PageResponse.of(result, result.getContent().stream().map(this::toResponse).collect(Collectors.toList()));
     }

@@ -18,6 +18,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.UUID;
 
@@ -39,6 +41,15 @@ public class AuthService {
         catch (Exception e) { return "system"; }
     }
 
+    private List<String> buildCities(User user) {
+        List<String> cities = new ArrayList<>();
+        if (user.getCity() != null) cities.add(user.getCity().name());
+        if (user.getAdditionalCities() != null) {
+            user.getAdditionalCities().forEach(c -> cities.add(c.name()));
+        }
+        return cities;
+    }
+
     public AuthResponse login(LoginRequest request) {
         // Find user by email
         User user = userRepository.findByEmail(request.getEmail())
@@ -53,7 +64,7 @@ public class AuthService {
         String token = jwtUtil.generateToken(userDetails);
         String city = user.getCity() != null ? user.getCity().name() : null;
         String avatarUrl = user.getAvatarPath() != null ? "/api/users/" + user.getId() + "/avatar" : null;
-        return new AuthResponse(token, user.getUsername(), user.getRole().name(), city, user.getId(), avatarUrl);
+        return new AuthResponse(token, user.getUsername(), user.getRole().name(), city, user.getId(), avatarUrl, buildCities(user));
     }
 
     public AuthResponse register(RegisterRequest request) {
@@ -63,8 +74,7 @@ public class AuthService {
         if (request.getRole() == Role.USER && request.getCity() == null) {
             throw new RuntimeException("La ville est requise pour un utilisateur");
         }
-        if (request.getEmail() != null && !request.getEmail().isBlank()
-                && userRepository.existsByEmail(request.getEmail())) {
+        if (userRepository.existsByEmail(request.getEmail())) {
             throw new RuntimeException("Cet email est déjà utilisé");
         }
 
@@ -75,20 +85,18 @@ public class AuthService {
                 .password(passwordEncoder.encode(rawPassword))
                 .role(request.getRole())
                 .city(request.getRole() == Role.USER ? request.getCity() : null)
-                .email(request.getEmail() != null && !request.getEmail().isBlank() ? request.getEmail().trim() : null)
+                .additionalCities(request.getRole() == Role.USER && request.getAdditionalCities() != null
+                        ? request.getAdditionalCities() : new HashSet<>())
+                .email(request.getEmail().trim())
                 .build();
 
         userRepository.save(user);
-
-        // Send welcome email with credentials if email provided
-        if (user.getEmail() != null) {
-            emailService.sendWelcomeEmail(user.getEmail(), user.getUsername(), rawPassword);
-        }
+        emailService.sendWelcomeEmail(user.getEmail(), user.getUsername(), rawPassword);
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(user.getUsername());
         String token = jwtUtil.generateToken(userDetails);
         String city = user.getCity() != null ? user.getCity().name() : null;
-        return new AuthResponse(token, user.getUsername(), user.getRole().name(), city, user.getId(), null);
+        return new AuthResponse(token, user.getUsername(), user.getRole().name(), city, user.getId(), null, buildCities(user));
     }
 
     public List<UserResponse> getAllUsers() {
@@ -96,7 +104,7 @@ public class AuthService {
                 .map(u -> new UserResponse(u.getId(), u.getUsername(), u.getRole().name(),
                         u.getCity() != null ? u.getCity().name() : null, u.isActive(),
                         u.getAvatarPath() != null ? "/api/users/" + u.getId() + "/avatar" : null,
-                        u.getEmail()))
+                        u.getEmail(), buildCities(u)))
                 .toList();
     }
 
@@ -120,6 +128,9 @@ public class AuthService {
         if (request.getCity() != null) {
             user.setCity(request.getCity());
         }
+        if (request.getAdditionalCities() != null) {
+            user.setAdditionalCities(request.getAdditionalCities());
+        }
         if (request.getEmail() != null) {
             String newEmail = request.getEmail().trim();
             if (!newEmail.isEmpty() && !newEmail.equals(user.getEmail())
@@ -140,7 +151,7 @@ public class AuthService {
         return new UserResponse(user.getId(), user.getUsername(), user.getRole().name(),
                 user.getCity() != null ? user.getCity().name() : null, user.isActive(),
                 user.getAvatarPath() != null ? "/api/users/" + user.getId() + "/avatar" : null,
-                user.getEmail());
+                user.getEmail(), buildCities(user));
     }
 
     public void changePassword(Long id, String newPassword) {
@@ -166,7 +177,7 @@ public class AuthService {
         return new UserResponse(user.getId(), user.getUsername(), user.getRole().name(),
                 user.getCity() != null ? user.getCity().name() : null, user.isActive(),
                 user.getAvatarPath() != null ? "/api/users/" + user.getId() + "/avatar" : null,
-                user.getEmail());
+                user.getEmail(), buildCities(user));
     }
 
     public void deleteUser(Long id) {

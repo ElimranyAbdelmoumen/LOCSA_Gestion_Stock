@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 
 public interface StockEntryRepository extends JpaRepository<StockEntry, Long> {
 
@@ -65,4 +66,8 @@ public interface StockEntryRepository extends JpaRepository<StockEntry, Long> {
     Page<StockEntry> findByDateEntryBetweenOrderByDateEntryDesc(LocalDate from, LocalDate to, Pageable pageable);
     Page<StockEntry> findByCreatedByAndDateEntryBetweenOrderByDateEntryDesc(String createdBy, LocalDate from, LocalDate to, Pageable pageable);
     Page<StockEntry> findByCreatedByAndCityAndDateEntryBetweenOrderByDateEntryDesc(String createdBy, City city, LocalDate from, LocalDate to, Pageable pageable);
+
+    // Multi-city (user assigned to more than one city)
+    Page<StockEntry> findByCityInOrderByDateEntryDesc(Set<City> cities, Pageable pageable);
+    Page<StockEntry> findByCityInAndDateEntryBetweenOrderByDateEntryDesc(Set<City> cities, LocalDate from, LocalDate to, Pageable pageable);
 }

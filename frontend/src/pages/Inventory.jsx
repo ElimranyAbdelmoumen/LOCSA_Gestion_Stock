@@ -195,9 +195,9 @@ const Inventory = () => {
           <p className="text-gray-500 text-sm mt-1">{inventoriesPage.totalElements} inventaire(s) enregistré(s)</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={handleExport} className="btn-secondary flex items-center gap-2">
+          <button onClick={handleExport} className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors">
             <FileDown size={16} />
-            Exporter Excel
+            Excel
           </button>
           <button onClick={openModal} className="btn-primary flex items-center gap-2">
             <Plus size={16} />

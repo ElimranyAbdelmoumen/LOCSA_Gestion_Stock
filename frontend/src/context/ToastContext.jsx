@@ -40,10 +40,10 @@ export const ToastProvider = ({ children }) => {
   }, [remove])
 
   const toast = {
-    success: (msg) => add(msg, 'success'),
-    error:   (msg) => add(msg, 'error'),
-    warning: (msg) => add(msg, 'warning'),
-    info:    (msg) => add(msg, 'info'),
+    success: (msg) => add(msg, 'success', 4000),
+    error:   (msg) => add(msg, 'error',   10000),
+    warning: (msg) => add(msg, 'warning', 6000),
+    info:    (msg) => add(msg, 'info',    4000),
   }
 
   return (

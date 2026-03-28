@@ -51,7 +51,7 @@ const emptyForm = {
 }
 
 const Exits = () => {
-  const { isAdmin, userCity } = useAuth()
+  const { isAdmin, userCity, userCities } = useAuth()
   const toast = useToast()
   const [cancelTarget, setCancelTarget] = useState(null)
   const [exitsPage, setExitsPage]       = useState({ content: [], totalElements: 0, totalPages: 0, currentPage: 0, pageSize: 20 })
@@ -71,11 +71,12 @@ const Exits = () => {
   const [formLoading, setFormLoading] = useState(false)
   const [formError, setFormError]     = useState('')
 
+  const isMultiCity = !isAdmin && userCities && userCities.length > 1
+
   const fetchAll = async (city, page = 0) => {
     setLoading(true)
     setError('')
-    // For non-admin, always pass their city to get city-specific stock
-    const productCity = isAdmin ? (city || undefined) : userCity
+    const productCity = isAdmin ? (city || undefined) : (city || userCity)
     try {
       const [exitsRes, productsRes, sitesRes] = await Promise.all([
         getExits(city || undefined, dateFrom || undefined, dateTo || undefined, page, 20),
@@ -122,7 +123,7 @@ const Exits = () => {
   const validateForm = () => {
     const errs = {}
     if (!form.category) errs.category = 'Sélectionnez une catégorie'
-    if (isAdmin && !form.city) errs.city = 'La ville est requise'
+    if ((isAdmin || isMultiCity) && !form.city) errs.city = 'La ville est requise'
     if (!form.productId) errs.productId = 'Veuillez sélectionner un produit'
     if (!form.dateExit)  errs.dateExit  = 'La date est requise'
     if (!form.quantity)  errs.quantity  = 'La quantité est requise'
@@ -160,7 +161,7 @@ const Exits = () => {
         dateExit:  form.dateExit,
         quantity:  Number(form.quantity),
         comment:   form.comment.trim() || null,
-        ...(isAdmin && form.city ? { city: form.city } : {}),
+        ...((isAdmin || isMultiCity) && form.city ? { city: form.city } : {}),
       }
       if (isCatA) {
         payload.beneficiary  = form.beneficiary.trim()
@@ -244,10 +245,10 @@ const Exits = () => {
           <p className="text-gray-500 text-sm mt-0.5">{exitsPage.totalElements} sortie(s)</p>
         </div>
         <div className="flex items-center gap-2 no-print">
-          <button onClick={handleExportCSV} className="btn-secondary flex items-center gap-1.5 no-print px-3">
-            <Download size={15} /> <span className="hidden sm:inline">Exporter</span>
+          <button onClick={handleExportCSV} className="no-print flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors">
+            <Download size={15} /> <span className="hidden sm:inline">Excel</span>
           </button>
-          <button onClick={() => window.print()} className="btn-secondary flex items-center gap-1.5 no-print px-3">
+          <button onClick={() => window.print()} className="no-print flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100 transition-colors">
             <Printer size={15} /> <span className="hidden sm:inline">Imprimer</span>
           </button>
           <button onClick={openModal} className="btn-primary flex items-center gap-1.5 px-3">
@@ -281,9 +282,9 @@ const Exits = () => {
               {c === '' ? 'Toutes' : `Cat. ${c}`}
             </button>
           ))}
-          {isAdmin ? (
+          {(isAdmin || isMultiCity) ? (
             <>
-              {CITIES.map(c => (
+              {(isAdmin ? CITIES : CITIES.filter(c => userCities.includes(c.value))).map(c => (
                 <button key={c.value} onClick={() => setCityFilter(cityFilter === c.value ? '' : c.value)}
                   className={`px-3 py-2 text-xs font-medium rounded-lg transition-all ${cityFilter === c.value ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
                   {c.label}
@@ -509,11 +510,11 @@ const Exits = () => {
               {form.category && (
                 <>
                   {/* City */}
-                  {isAdmin ? (
+                  {(isAdmin || isMultiCity) ? (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Ville <span className="text-red-500">*</span></label>
                       <div className="flex gap-2">
-                        {CITIES.map(c => (
+                        {(isAdmin ? CITIES : CITIES.filter(c => userCities.includes(c.value))).map(c => (
                           <button key={c.value} type="button"
                             onClick={() => { setForm(prev => ({ ...prev, city: c.value, productId: '', siteId: '' })); setFormErrors(prev => ({ ...prev, city: '' })) }}
                             className={`flex-1 py-2 text-sm font-medium rounded-lg border transition-all ${form.city === c.value ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}
@@ -560,8 +561,8 @@ const Exits = () => {
                       <span className="text-sm font-medium text-gray-700">
                         Stock disponible
                         {!isAdmin && (
-                          <span className={`ml-1 text-xs font-normal ${CITY_COLORS[userCity] || ''}`}>
-                            ({CITIES.find(c => c.value === userCity)?.label || userCity})
+                          <span className={`ml-1 text-xs font-normal ${CITY_COLORS[form.city || userCity] || ''}`}>
+                            ({CITIES.find(c => c.value === (form.city || userCity))?.label || (form.city || userCity)})
                           </span>
                         )}
                       </span>
